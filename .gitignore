@@ -1,0 +1,40 @@
+# Android Studio and IDE metadata
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Gradle and Android build outputs
+.gradle/
+**/build/
+/captures/
+.externalNativeBuild/
+.cxx/
+
+# Local machine configuration
+local.properties
+*.local
+
+# Environment files and secrets
+.env
+.env.*
+!.env.example
+**/secrets.properties
+**/google-services.json
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.pem
+
+# Supabase CLI local state
+supabase/.temp/
+supabase/.branches/
+
+# Generated and local test artifacts
+**/generated/
+test-results/
+
+# OS files
+.DS_Store
+Thumbs.db
