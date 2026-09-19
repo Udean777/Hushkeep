@@ -15,8 +15,10 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -82,7 +84,9 @@ fun MainNavGraph(
                     .padding(innerPadding),
             ) {
                 if (!isCompact && showNavigation) {
-                    NavigationRail {
+                    NavigationRail(
+                        containerColor = MaterialTheme.colorScheme.background,
+                    ) {
                         navigationDestinations.forEach { item ->
                             NavigationRailItem(
                                 selected = currentRoute == item.destination.route,
@@ -137,13 +141,22 @@ private fun BottomNavigationBar(
     navController: NavHostController,
     currentRoute: String?,
 ) {
-    NavigationBar {
+    NavigationBar(
+        containerColor = MaterialTheme.colorScheme.surface,
+    ) {
         navigationDestinations.forEach { item ->
             NavigationBarItem(
                 selected = currentRoute == item.destination.route,
                 onClick = { navigateTopLevel(navController, item.destination) },
                 icon = { Icon(item.icon, contentDescription = item.label) },
                 label = { Text(item.label) },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = MaterialTheme.colorScheme.onPrimary,
+                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                    indicatorColor = MaterialTheme.colorScheme.primary,
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                ),
             )
         }
     }

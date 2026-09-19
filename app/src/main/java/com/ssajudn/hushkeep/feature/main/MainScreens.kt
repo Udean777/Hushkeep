@@ -43,12 +43,10 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -57,7 +55,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -73,14 +70,14 @@ import com.ssajudn.hushkeep.core.ui.components.EmptyState
 import com.ssajudn.hushkeep.core.ui.components.ErrorState
 import com.ssajudn.hushkeep.core.ui.components.HushkeepTopBar
 import com.ssajudn.hushkeep.core.ui.components.LoadingState
-import com.ssajudn.hushkeep.core.ui.components.MemoryListItem
-import com.ssajudn.hushkeep.core.ui.components.MemoryThumbnail
 import com.ssajudn.hushkeep.core.ui.components.UploadProgressRow
 import com.ssajudn.hushkeep.domain.model.Album
 import com.ssajudn.hushkeep.domain.model.Memory
 import com.ssajudn.hushkeep.domain.model.TrashItem
 import com.ssajudn.hushkeep.domain.model.TrashResourceType
 import com.ssajudn.hushkeep.feature.HushkeepViewModel
+import com.ssajudn.hushkeep.ui.theme.HushkeepNight
+import com.ssajudn.hushkeep.ui.theme.HushkeepPaper
 
 @Composable
 fun TimelineScreen(viewModel: HushkeepViewModel) {
@@ -96,8 +93,8 @@ fun TimelineScreen(viewModel: HushkeepViewModel) {
             HushkeepTopBar("Vault")
             ArchiveHeader(
                 eyebrow = "YOUR QUIET SPACE",
-                title = "Memories, kept quietly.",
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                title = "Keep the good days close.",
+                modifier = Modifier.padding(start = 20.dp, top = 4.dp, end = 20.dp, bottom = 12.dp),
             )
             AnimatedVisibility(
                 visible = activeUploadCount > 0,
@@ -152,9 +149,9 @@ fun SearchScreen(viewModel: HushkeepViewModel) {
     Column(Modifier.fillMaxSize()) {
         HushkeepTopBar("Search")
         ArchiveHeader(
-            eyebrow = "FIND A MOMENT",
-            title = "Search your archive",
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+            eyebrow = "YOUR ARCHIVE",
+            title = "Find a moment",
+            modifier = Modifier.padding(start = 20.dp, top = 4.dp, end = 20.dp, bottom = 8.dp),
         )
         OutlinedTextField(
             value = query,
@@ -195,6 +192,11 @@ fun FavoritesScreen(viewModel: HushkeepViewModel) {
     var selectedMemory by remember { mutableStateOf<Memory?>(null) }
     Column(Modifier.fillMaxSize()) {
         HushkeepTopBar("Favorites")
+        ArchiveHeader(
+            eyebrow = "KEPT CLOSE",
+            title = "Saved moments",
+            modifier = Modifier.padding(start = 20.dp, top = 4.dp, end = 20.dp, bottom = 8.dp),
+        )
         MemoryListContent(
             state = state,
             onFavorite = viewModel::toggleFavorite,
@@ -319,6 +321,11 @@ fun AlbumDetailScreen(
     var selectedMemory by remember { mutableStateOf<Memory?>(null) }
     Column(Modifier.fillMaxSize()) {
         HushkeepTopBar("Album", onBack = onBack)
+        ArchiveHeader(
+            eyebrow = "PRIVATE ALBUM",
+            title = "A small room for memories",
+            modifier = Modifier.padding(start = 20.dp, top = 4.dp, end = 20.dp, bottom = 8.dp),
+        )
         MemoryListContent(
             state = state,
             onFavorite = viewModel::toggleFavorite,
@@ -358,7 +365,7 @@ private fun MemoryViewerDialog(
     ) {
         Surface(
             modifier = Modifier.fillMaxSize(),
-            color = Color(0xFF10120F),
+            color = HushkeepNight,
         ) {
             Box(Modifier.fillMaxSize()) {
                 if (memory.localUri != null) {
@@ -373,9 +380,9 @@ private fun MemoryViewerDialog(
                         modifier = Modifier.align(Alignment.Center),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        CircularProgressIndicator(color = Color.White)
+                        CircularProgressIndicator(color = HushkeepPaper)
                         Spacer(Modifier.height(12.dp))
-                        Text("Foto belum tersedia", color = Color.White)
+                        Text("Foto belum tersedia", color = HushkeepPaper)
                     }
                 }
                 Row(
@@ -386,13 +393,13 @@ private fun MemoryViewerDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Tutup", tint = Color.White)
+                        Icon(Icons.Default.Close, contentDescription = "Tutup", tint = HushkeepPaper)
                     }
                     IconButton(onClick = onFavorite) {
                         Icon(
                             if (memory.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                             contentDescription = if (memory.isFavorite) "Hapus dari favorit" else "Simpan ke favorit",
-                            tint = if (memory.isFavorite) MaterialTheme.colorScheme.secondary else Color.White,
+                            tint = if (memory.isFavorite) MaterialTheme.colorScheme.secondary else HushkeepPaper,
                         )
                     }
                 }
@@ -400,7 +407,7 @@ private fun MemoryViewerDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .align(Alignment.BottomCenter),
-                    color = Color(0xD910120F),
+                    color = HushkeepNight.copy(alpha = 0.88f),
                 ) {
                     Column(Modifier.padding(20.dp)) {
                         if (editing) {
@@ -408,8 +415,8 @@ private fun MemoryViewerDialog(
                                 value = caption,
                                 onValueChange = { caption = it },
                                 modifier = Modifier.fillMaxWidth(),
-                                label = { Text("Caption singkat", color = Color.White) },
-                                textStyle = MaterialTheme.typography.bodyLarge.copy(color = Color.White),
+                                label = { Text("Caption singkat", color = HushkeepPaper) },
+                                textStyle = MaterialTheme.typography.bodyLarge.copy(color = HushkeepPaper),
                             )
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -425,7 +432,7 @@ private fun MemoryViewerDialog(
                             Text(
                                 memory.caption ?: "Kenangan tanpa caption",
                                 style = MaterialTheme.typography.titleMedium,
-                                color = Color.White,
+                                color = HushkeepPaper,
                                 maxLines = 3,
                                 overflow = TextOverflow.Ellipsis,
                             )

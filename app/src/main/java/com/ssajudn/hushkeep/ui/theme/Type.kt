@@ -67,3 +67,11 @@ val ArchiveDateTypography = TextStyle(
     fontSize = 18.sp,
     lineHeight = 24.sp,
 )
+
+val ArchiveTitleTypography = TextStyle(
+    fontFamily = FontFamily.Serif,
+    fontWeight = FontWeight.Normal,
+    fontSize = 28.sp,
+    lineHeight = 34.sp,
+    letterSpacing = (-0.2).sp,
+)

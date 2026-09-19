@@ -7,14 +7,18 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.BrokenImage
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.CloudOff
@@ -46,12 +50,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.ssajudn.hushkeep.core.common.FileSizeFormatter
+import com.ssajudn.hushkeep.core.common.HushkeepDateTimeFormatter
 import com.ssajudn.hushkeep.domain.model.Album
 import com.ssajudn.hushkeep.domain.model.Memory
 import com.ssajudn.hushkeep.domain.model.SyncState
 import com.ssajudn.hushkeep.ui.theme.ArchiveDateTypography
+import com.ssajudn.hushkeep.ui.theme.ArchiveTitleTypography
 import com.ssajudn.hushkeep.ui.theme.HushkeepClay
 import com.ssajudn.hushkeep.ui.theme.HushkeepDimensions
+import com.ssajudn.hushkeep.ui.theme.HushkeepPaper
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
@@ -90,21 +97,21 @@ fun ArchiveHeader(
     modifier: Modifier = Modifier,
     action: (@Composable () -> Unit)? = null,
 ) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.Bottom,
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Column {
+    Column(modifier = modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Bottom,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
             Text(
                 eyebrow,
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.primary,
             )
-            Spacer(Modifier.height(4.dp))
-            Text(title, style = MaterialTheme.typography.headlineSmall)
+            action?.invoke()
         }
-        action?.invoke()
+        Spacer(Modifier.height(6.dp))
+        Text(title, style = ArchiveTitleTypography)
     }
 }
 
@@ -281,12 +288,13 @@ fun FeaturedMemoryCard(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.extraLarge,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(210.dp)
+                    .aspectRatio(1.42f)
                     .background(MaterialTheme.colorScheme.surfaceVariant),
             ) {
                 if (memory.localUri != null) {
@@ -312,16 +320,16 @@ fun FeaturedMemoryCard(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        "Featured memory",
+                        "A moment to return to",
                         modifier = Modifier.weight(1f),
                         style = MaterialTheme.typography.labelLarge,
-                        color = Color.White,
+                        color = HushkeepPaper,
                     )
                     IconButton(onClick = onFavorite) {
                         Icon(
                             if (memory.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                             contentDescription = if (memory.isFavorite) "Hapus dari favorit" else "Simpan ke favorit",
-                            tint = if (memory.isFavorite) MaterialTheme.colorScheme.secondary else Color.White,
+                            tint = if (memory.isFavorite) MaterialTheme.colorScheme.secondary else HushkeepPaper,
                         )
                     }
                 }
@@ -332,7 +340,7 @@ fun FeaturedMemoryCard(
             ) {
                 Column(Modifier.weight(1f)) {
                     Text(
-                        memory.caption ?: "Kenangan tanpa caption",
+                        memory.caption ?: "Satu momen untuk diingat",
                         style = MaterialTheme.typography.titleMedium,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
@@ -352,21 +360,23 @@ fun FeaturedMemoryCard(
 fun MemoryGridTile(
     memory: Memory,
     onFavorite: () -> Unit,
-    onDelete: () -> Unit,
     onOpen: () -> Unit,
+    aspectRatio: Float = 1f,
     modifier: Modifier = Modifier,
 ) {
     Card(
         onClick = onOpen,
-        modifier = modifier,
+        modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(126.dp)
+                    .aspectRatio(aspectRatio)
+                    .clip(MaterialTheme.shapes.medium)
                     .background(MaterialTheme.colorScheme.surfaceVariant),
             ) {
                 if (memory.localUri != null) {
@@ -409,20 +419,74 @@ fun MemoryGridTile(
 }
 
 @Composable
-fun MemoryThumbnail(memory: Memory, modifier: Modifier = Modifier) {
+fun MemoryResurfacingLane(
+    memories: List<Memory>,
+    onOpen: (Memory) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text("On this day", style = MaterialTheme.typography.titleMedium)
+        Spacer(Modifier.height(3.dp))
+        Text(
+            "A small return to a day worth keeping.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(12.dp))
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(end = 4.dp),
+        ) {
+            items(memories, key = Memory::id) { memory ->
+                Card(
+                    onClick = { onOpen(memory) },
+                    modifier = Modifier.width(220.dp),
+                    shape = MaterialTheme.shapes.large,
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        MemoryThumbnail(memory, modifier = Modifier.size(64.dp))
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                memory.caption ?: "A quiet moment",
+                                style = MaterialTheme.typography.titleMedium,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Spacer(Modifier.height(3.dp))
+                            Text(
+                                HushkeepDateTimeFormatter.timelineDay(memory.capturedAt),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun MemoryThumbnail(memory: Memory, modifier: Modifier = Modifier.size(76.dp)) {
     if (memory.localUri != null) {
         AsyncImage(
             model = Uri.parse(memory.localUri),
             contentDescription = memory.caption ?: "Foto kenangan",
             modifier = modifier
-                .size(76.dp)
                 .clip(MaterialTheme.shapes.small),
             contentScale = ContentScale.Crop,
         )
     } else {
         Box(
             modifier = modifier
-                .size(76.dp)
                 .clip(MaterialTheme.shapes.small)
                 .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center,
@@ -461,16 +525,17 @@ fun AlbumCard(
     Card(
         onClick = onClick,
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         shape = MaterialTheme.shapes.large,
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 modifier = Modifier
-                    .size(56.dp)
+                    .size(width = 72.dp, height = 76.dp)
                     .clip(MaterialTheme.shapes.medium)
                     .background(MaterialTheme.colorScheme.primaryContainer),
                 contentAlignment = Alignment.Center,
@@ -482,11 +547,16 @@ fun AlbumCard(
                 Text(album.name, style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(3.dp))
                 Text(
-                    "Ruang pribadi",
+                    "Diperbarui ${HushkeepDateTimeFormatter.timelineDay(album.updatedAt)}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            Icon(
+                Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = "Buka album",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }

@@ -1,0 +1,15 @@
+{
+  "date": "2026-09-19",
+  "designSystem": "DESIGN.md",
+  "framework": "Jetpack Compose",
+  "material": "Material 3",
+  "motion": "restrained; photo transitions, upload feedback, state changes",
+  "adaptive": "existing window-width navigation rail and gallery column adaptation",
+  "preserved": [
+    "warm paper and ink palette",
+    "moss primary actions",
+    "clay attention states",
+    "sans utility typography with serif archive dates",
+    "private archive information architecture"
+  ]
+}
