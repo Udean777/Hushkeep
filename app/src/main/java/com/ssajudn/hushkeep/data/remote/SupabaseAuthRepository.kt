@@ -2,13 +2,16 @@ package com.ssajudn.hushkeep.data.remote
 
 import com.ssajudn.hushkeep.core.common.AppError
 import com.ssajudn.hushkeep.core.common.AppResult
+import com.ssajudn.hushkeep.core.common.OtpPolicy
 import com.ssajudn.hushkeep.core.common.UsernamePolicy
+import com.ssajudn.hushkeep.core.common.UserFacingMessages
 import com.ssajudn.hushkeep.core.config.AppConfig
 import com.ssajudn.hushkeep.domain.repository.AuthRepository
 import com.ssajudn.hushkeep.domain.repository.AuthState
 import com.ssajudn.hushkeep.domain.repository.AuthUser
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.OtpType
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -43,9 +46,7 @@ class SupabaseAuthRepository(
                 } ?: AuthState.SignedOut
             },
             onFailure = { error ->
-                _state.value = AuthState.Error(
-                    error.message ?: "Sesi sebelumnya tidak dapat dipulihkan.",
-                )
+                _state.value = AuthState.Error(UserFacingMessages.SESSION_RESTORE_FAILED)
             },
         )
     }
@@ -70,7 +71,7 @@ class SupabaseAuthRepository(
                 AppResult.Success(user)
             },
             onFailure = { error ->
-                _state.value = AuthState.Error(error.message ?: "Tidak dapat masuk.")
+                _state.value = AuthState.Error(UserFacingMessages.SIGN_IN_FAILED)
                 AppResult.Failure(AppError.Remote("Tidak dapat masuk ke Hushkeep.", error))
             },
         )
@@ -111,7 +112,7 @@ class SupabaseAuthRepository(
                 AppResult.Success(user)
             },
             onFailure = { error ->
-                _state.value = AuthState.Error(error.message ?: "Tidak dapat membuat akun.")
+                _state.value = AuthState.Error(UserFacingMessages.SIGN_UP_FAILED)
                 AppResult.Failure(AppError.Remote("Tidak dapat membuat akun.", error))
             },
         )
@@ -150,6 +151,57 @@ class SupabaseAuthRepository(
             onSuccess = { AppResult.Success(Unit) },
             onFailure = { error ->
                 AppResult.Failure(AppError.Remote("Akun belum dapat dihapus.", error))
+            },
+        )
+    }
+
+    override suspend fun reauthenticate(password: String): AppResult<Unit> {
+        if (password.isBlank()) return AppResult.Failure(AppError.Validation("Password wajib diisi."))
+        val email = client.auth.currentUserOrNull()?.email
+            ?: return AppResult.Failure(AppError.AuthenticationRequired)
+        return runCatching {
+            client.auth.signInWith(Email) {
+                this.email = email
+                this.password = password
+            }
+        }.fold(
+            onSuccess = { AppResult.Success(Unit) },
+            onFailure = { AppResult.Failure(AppError.Remote("Password tidak cocok.", it)) },
+        )
+    }
+
+    override suspend fun verifySignupOtp(email: String, token: String): AppResult<AuthUser> {
+        if (!OtpPolicy.isValid(token)) {
+            return AppResult.Failure(AppError.Validation("Kode verifikasi harus 6 digit."))
+        }
+        return runCatching {
+            client.auth.verifyEmailOtp(
+                type = OtpType.Email.SIGNUP,
+                email = email.trim(),
+                token = token,
+            )
+            val user = client.auth.currentUserOrNull()
+                ?: error("Sesi verifikasi belum tersedia.")
+            AuthUser(user.id, user.email, isLocalPreview = false)
+        }.fold(
+            onSuccess = { user ->
+                _state.value = AuthState.SignedIn(user)
+                AppResult.Success(user)
+            },
+            onFailure = { error ->
+                AppResult.Failure(AppError.Remote(UserFacingMessages.OTP_VERIFY_FAILED, error))
+            },
+        )
+    }
+
+    override suspend fun resendSignupOtp(email: String): AppResult<Unit> {
+        if (email.isBlank()) return AppResult.Failure(AppError.Validation("Email wajib diisi."))
+        return runCatching {
+            client.auth.resendEmail(OtpType.Email.SIGNUP, email.trim())
+        }.fold(
+            onSuccess = { AppResult.Success(Unit) },
+            onFailure = { error ->
+                AppResult.Failure(AppError.Remote(UserFacingMessages.OTP_RESEND_FAILED, error))
             },
         )
     }

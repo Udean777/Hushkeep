@@ -5,4 +5,5 @@ object SyncPolicy {
     const val INITIAL_BACKOFF_SECONDS: Long = 10L
     const val MAX_BACKOFF_SECONDS: Long = 6L * 60L * 60L
     const val UPLOAD_WORK_NAME: String = "hushkeep-upload-queue"
+    const val CLOUD_SYNC_WORK_NAME: String = "hushkeep-cloud-sync"
 }

@@ -14,6 +14,9 @@ interface MediaObjectDao {
     @Query("SELECT * FROM media_objects WHERE ownerId = :ownerId ORDER BY createdAtEpochMs ASC")
     suspend fun findAll(ownerId: String): List<MediaObjectEntity>
 
+    @Query("SELECT * FROM media_objects WHERE ownerId = :ownerId AND storagePath IS NOT NULL")
+    suspend fun findSyncedForOwner(ownerId: String): List<MediaObjectEntity>
+
     @Query("SELECT * FROM media_objects WHERE memoryId = :memoryId")
     suspend fun findForMemory(memoryId: String): List<MediaObjectEntity>
 
@@ -40,11 +43,20 @@ interface MediaObjectDao {
         updatedAtEpochMs: Long,
     ): Int
 
-    @Query("SELECT COALESCE(SUM(sizeBytes), 0) FROM media_objects WHERE ownerId = :ownerId")
-    fun observeStorageUsage(ownerId: String): Flow<Long>
+    @Query("SELECT COALESCE(SUM(sizeBytes), 0) FROM media_objects WHERE ownerId = :ownerId AND localUri IS NOT NULL")
+    fun observeLocalStorageUsage(ownerId: String): Flow<Long>
+
+    @Query("SELECT COALESCE(SUM(sizeBytes), 0) FROM media_objects WHERE ownerId = :ownerId AND storagePath IS NOT NULL")
+    fun observeCloudStorageUsage(ownerId: String): Flow<Long>
+
+    @Query("SELECT COALESCE(SUM(sizeBytes), 0) FROM media_objects WHERE ownerId = :ownerId AND storagePath IS NULL")
+    fun observePendingStorageUsage(ownerId: String): Flow<Long>
 
     @Query("DELETE FROM media_objects WHERE memoryId = :memoryId")
     suspend fun deleteForMemory(memoryId: String): Int
+
+    @Query("DELETE FROM media_objects WHERE ownerId = :ownerId")
+    suspend fun deleteAllForOwner(ownerId: String): Int
 
     @Upsert
     suspend fun upsert(mediaObject: MediaObjectEntity)

@@ -2,22 +2,42 @@ package com.ssajudn.hushkeep.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val HushkeepPaper = Color(0xFFF4EFE6)
-val HushkeepSurface = Color(0xFFFBF8F1)
-val HushkeepSurfaceElevated = Color(0xFFFFFDF8)
-val HushkeepInk = Color(0xFF1E211D)
-val HushkeepMutedInk = Color(0xFF5F665E)
-val HushkeepLine = Color(0xFFC9C7BE)
-val HushkeepMoss = Color(0xFF486B59)
-val HushkeepMossPressed = Color(0xFF365342)
-val HushkeepMossLight = Color(0xFFA7C5AC)
-val HushkeepClay = Color(0xFFC86545)
-val HushkeepClayLight = Color(0xFFE38D6D)
-val HushkeepClayContainer = Color(0xFFF0D0C4)
-val HushkeepNight = Color(0xFF161916)
-val HushkeepNightSurface = Color(0xFF202521)
-val HushkeepNightElevated = Color(0xFF282E29)
-val HushkeepNightMuted = Color(0xFFB9C0B6)
-val HushkeepNightLine = Color(0xFF566057)
-val HushkeepNightMossContainer = Color(0xFF345040)
-val HushkeepNightClayContainer = Color(0xFF613B30)
+// Hushkeep's bright memory palette: cream paper, plum ink, coral actions,
+// sun-yellow moments, and cool mint/sky support tones.
+val HushkeepPaper = Color(0xFFFFF8EF)
+val HushkeepSurface = Color(0xFFFFFCF7)
+val HushkeepSurfaceElevated = Color(0xFFFFFFFB)
+val HushkeepInk = Color(0xFF2E2736)
+val HushkeepMutedInk = Color(0xFF746A79)
+val HushkeepLine = Color(0xFFE7D9D1)
+
+val HushkeepCoral = Color(0xFFD85B63)
+val HushkeepCoralPressed = Color(0xFFB94752)
+val HushkeepCoralLight = Color(0xFFFFB1A3)
+val HushkeepCoralContainer = Color(0xFFFFE0D8)
+val HushkeepSun = Color(0xFFF0C85A)
+val HushkeepSunLight = Color(0xFFFFE6A0)
+val HushkeepSunContainer = Color(0xFFFFF1C7)
+val HushkeepMint = Color(0xFF65B8A6)
+val HushkeepMintContainer = Color(0xFFD3F1E6)
+val HushkeepSky = Color(0xFF6DB8D5)
+val HushkeepSkyContainer = Color(0xFFD7EFF7)
+
+// Kept as semantic aliases for existing components while the visual system
+// moves away from the original moss/clay vocabulary.
+val HushkeepMoss = HushkeepCoral
+val HushkeepMossPressed = HushkeepCoralPressed
+val HushkeepMossLight = HushkeepCoralLight
+val HushkeepClay = HushkeepCoral
+val HushkeepClayLight = HushkeepCoralLight
+val HushkeepClayContainer = HushkeepCoralContainer
+
+val HushkeepNight = Color(0xFF1D1824)
+val HushkeepNightSurface = Color(0xFF282130)
+val HushkeepNightElevated = Color(0xFF342A3C)
+val HushkeepNightMuted = Color(0xFFC9BDCC)
+val HushkeepNightLine = Color(0xFF62556A)
+val HushkeepNightMossContainer = Color(0xFF713A4A)
+val HushkeepNightClayContainer = Color(0xFF665126)
+val HushkeepNightMintContainer = Color(0xFF24594F)
+val HushkeepNightSkyContainer = Color(0xFF254E62)

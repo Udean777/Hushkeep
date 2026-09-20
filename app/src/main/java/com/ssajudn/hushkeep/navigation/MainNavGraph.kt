@@ -1,10 +1,8 @@
 package com.ssajudn.hushkeep.navigation
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material.icons.Icons
@@ -12,17 +10,9 @@ import androidx.compose.material.icons.filled.CollectionsBookmark
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.NavigationRail
-import androidx.compose.material3.NavigationRailItem
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -32,6 +22,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.ssajudn.hushkeep.core.ui.components.ArchiveNavigationBar
+import com.ssajudn.hushkeep.core.ui.components.ArchiveNavigationItem
+import com.ssajudn.hushkeep.core.ui.components.ArchiveNavigationRail
 import com.ssajudn.hushkeep.feature.HushkeepViewModel
 import com.ssajudn.hushkeep.feature.main.AlbumDetailScreen
 import com.ssajudn.hushkeep.feature.main.AlbumsScreen
@@ -39,19 +32,14 @@ import com.ssajudn.hushkeep.feature.main.SearchScreen
 import com.ssajudn.hushkeep.feature.main.TimelineScreen
 import com.ssajudn.hushkeep.feature.main.TrashScreen
 import com.ssajudn.hushkeep.feature.settings.SettingsScreen
+import com.ssajudn.hushkeep.feature.settings.PrivacyPolicyScreen
 import com.ssajudn.hushkeep.ui.theme.ThemeMode
 
-private data class NavigationDestination(
-    val destination: AppDestination,
-    val label: String,
-    val icon: androidx.compose.ui.graphics.vector.ImageVector,
-)
-
 private val navigationDestinations = listOf(
-    NavigationDestination(AppDestination.Timeline, "Vault", Icons.Default.Home),
-    NavigationDestination(AppDestination.Albums, "Albums", Icons.Default.CollectionsBookmark),
-    NavigationDestination(AppDestination.Search, "Search", Icons.Default.Search),
-    NavigationDestination(AppDestination.Settings, "You", Icons.Default.Person),
+    ArchiveNavigationItem(AppDestination.Timeline.route, "Vault", Icons.Default.Home),
+    ArchiveNavigationItem(AppDestination.Albums.route, "Albums", Icons.Default.CollectionsBookmark),
+    ArchiveNavigationItem(AppDestination.Search.route, "Search", Icons.Default.Search),
+    ArchiveNavigationItem(AppDestination.Settings.route, "You", Icons.Default.Person),
 )
 
 @Composable
@@ -64,7 +52,7 @@ fun MainNavGraph(
     val navController = rememberNavController()
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = currentBackStackEntry?.destination?.route
-    val showNavigation = navigationDestinations.any { it.destination.route == currentRoute }
+    val showNavigation = navigationDestinations.any { it.route == currentRoute }
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val isCompact = maxWidth < 600.dp
@@ -74,7 +62,11 @@ fun MainNavGraph(
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
             bottomBar = {
                 if (isCompact && showNavigation) {
-                    BottomNavigationBar(navController, currentRoute)
+                    ArchiveNavigationBar(
+                        items = navigationDestinations,
+                        currentRoute = currentRoute,
+                        onNavigate = { route -> navigateTopLevel(navController, route) },
+                    )
                 }
             },
         ) { innerPadding ->
@@ -84,19 +76,11 @@ fun MainNavGraph(
                     .padding(innerPadding),
             ) {
                 if (!isCompact && showNavigation) {
-                    NavigationRail(
-                        containerColor = MaterialTheme.colorScheme.background,
-                    ) {
-                        navigationDestinations.forEach { item ->
-                            NavigationRailItem(
-                                selected = currentRoute == item.destination.route,
-                                onClick = { navigateTopLevel(navController, item.destination) },
-                                icon = { Icon(item.icon, contentDescription = item.label) },
-                                label = { Text(item.label) },
-                                alwaysShowLabel = true,
-                            )
-                        }
-                    }
+                    ArchiveNavigationRail(
+                        items = navigationDestinations,
+                        currentRoute = currentRoute,
+                        onNavigate = { route -> navigateTopLevel(navController, route) },
+                    )
                 }
                 NavHost(
                     navController = navController,
@@ -116,7 +100,11 @@ fun MainNavGraph(
                             themeMode = themeMode,
                             onThemeChanged = onThemeChanged,
                             onOpenTrash = { navController.navigate(AppDestination.Trash.route) },
+                            onOpenPrivacyPolicy = { navController.navigate(AppDestination.PrivacyPolicy.route) },
                         )
+                    }
+                    composable(AppDestination.PrivacyPolicy.route) {
+                        PrivacyPolicyScreen(onBack = { navController.popBackStack() })
                     }
                     composable(AppDestination.Trash.route) {
                         TrashScreen(viewModel) { navController.popBackStack() }
@@ -136,37 +124,11 @@ fun MainNavGraph(
     }
 }
 
-@Composable
-private fun BottomNavigationBar(
-    navController: NavHostController,
-    currentRoute: String?,
-) {
-    NavigationBar(
-        containerColor = MaterialTheme.colorScheme.surface,
-    ) {
-        navigationDestinations.forEach { item ->
-            NavigationBarItem(
-                selected = currentRoute == item.destination.route,
-                onClick = { navigateTopLevel(navController, item.destination) },
-                icon = { Icon(item.icon, contentDescription = item.label) },
-                label = { Text(item.label) },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = MaterialTheme.colorScheme.onPrimary,
-                    selectedTextColor = MaterialTheme.colorScheme.primary,
-                    indicatorColor = MaterialTheme.colorScheme.primary,
-                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                ),
-            )
-        }
-    }
-}
-
 private fun navigateTopLevel(
     navController: NavHostController,
-    destination: AppDestination,
+    route: String,
 ) {
-    navController.navigate(destination.route) {
+    navController.navigate(route) {
         popUpTo(AppDestination.Timeline.route) { saveState = true }
         launchSingleTop = true
         restoreState = true

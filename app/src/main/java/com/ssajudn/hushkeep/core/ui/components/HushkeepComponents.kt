@@ -2,6 +2,7 @@ package com.ssajudn.hushkeep.core.ui.components
 
 import android.net.Uri
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.LazyRow
@@ -23,6 +25,8 @@ import androidx.compose.material.icons.filled.BrokenImage
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Refresh
@@ -38,8 +42,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,11 +56,16 @@ import com.ssajudn.hushkeep.core.common.HushkeepDateTimeFormatter
 import com.ssajudn.hushkeep.domain.model.Album
 import com.ssajudn.hushkeep.domain.model.Memory
 import com.ssajudn.hushkeep.domain.model.SyncState
+import com.ssajudn.hushkeep.domain.model.StorageUsage
 import com.ssajudn.hushkeep.ui.theme.ArchiveDateTypography
+import com.ssajudn.hushkeep.ui.theme.ArchiveHeroTypography
+import com.ssajudn.hushkeep.ui.theme.ArchiveMetaTypography
 import com.ssajudn.hushkeep.ui.theme.ArchiveTitleTypography
 import com.ssajudn.hushkeep.ui.theme.HushkeepClay
 import com.ssajudn.hushkeep.ui.theme.HushkeepDimensions
 import com.ssajudn.hushkeep.ui.theme.HushkeepPaper
+import com.ssajudn.hushkeep.ui.theme.HushkeepPillShape
+import com.ssajudn.hushkeep.ui.theme.HushkeepSheetShape
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
@@ -67,27 +74,31 @@ fun HushkeepTopBar(
     onBack: (() -> Unit)? = null,
     actions: @Composable () -> Unit = {},
 ) {
-    TopAppBar(
-        title = {
-            Text(
-                title,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.titleLarge,
-            )
-        },
-        navigationIcon = {
-            if (onBack != null) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
-                }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+            .padding(horizontal = HushkeepDimensions.screenPadding, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (onBack != null) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
             }
-        },
-        actions = { actions() },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.background,
-        ),
-    )
+            Spacer(Modifier.width(6.dp))
+        } else {
+            MemoryRibbonMark(modifier = Modifier.width(58.dp), compact = true)
+            Spacer(Modifier.width(12.dp))
+        }
+        Text(
+            title,
+            modifier = Modifier.weight(1f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            style = MaterialTheme.typography.titleLarge,
+        )
+        actions()
+    }
 }
 
 @Composable
@@ -105,13 +116,13 @@ fun ArchiveHeader(
         ) {
             Text(
                 eyebrow,
-                style = MaterialTheme.typography.labelMedium,
+                style = ArchiveMetaTypography,
                 color = MaterialTheme.colorScheme.primary,
             )
             action?.invoke()
         }
         Spacer(Modifier.height(6.dp))
-        Text(title, style = ArchiveTitleTypography)
+        Text(title, style = if (title.length > 24) ArchiveTitleTypography else ArchiveHeroTypography)
     }
 }
 
@@ -170,7 +181,13 @@ fun EmptyState(
 }
 
 @Composable
-fun MemoryRibbonMark(modifier: Modifier = Modifier) {
+fun MemoryRibbonMark(
+    modifier: Modifier = Modifier,
+    compact: Boolean = false,
+) {
+    val leadWidth = if (compact) 26.dp else 40.dp
+    val dotSize = if (compact) 6.dp else 8.dp
+    val tailWidth = if (compact) 12.dp else 18.dp
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
@@ -178,24 +195,49 @@ fun MemoryRibbonMark(modifier: Modifier = Modifier) {
     ) {
         Box(
             modifier = Modifier
-                .width(40.dp)
+                .width(leadWidth)
                 .height(3.dp)
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.primary),
         )
         Box(
             modifier = Modifier
-                .size(8.dp)
+                .size(dotSize)
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.secondary),
         )
         Box(
             modifier = Modifier
-                .width(18.dp)
+                .width(tailWidth)
                 .height(3.dp)
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.primary),
         )
+    }
+}
+
+@Composable
+fun ArchiveAddButton(
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier,
+        shape = HushkeepPillShape,
+        color = MaterialTheme.colorScheme.primary,
+        contentColor = MaterialTheme.colorScheme.onPrimary,
+        shadowElevation = 8.dp,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 17.dp, vertical = 13.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(20.dp))
+            Text(label, style = MaterialTheme.typography.labelLarge)
+        }
     }
 }
 
@@ -243,7 +285,9 @@ fun MemoryListItem(
         onClick = onOpen,
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = MaterialTheme.shapes.medium,
+        shape = HushkeepSheetShape,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
         Row(
             modifier = Modifier.padding(HushkeepDimensions.compactPadding),
@@ -286,9 +330,10 @@ fun FeaturedMemoryCard(
     Card(
         onClick = onOpen,
         modifier = modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.extraLarge,
+        shape = HushkeepSheetShape,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.28f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
     ) {
         Column {
             Box(
@@ -297,9 +342,9 @@ fun FeaturedMemoryCard(
                     .aspectRatio(1.42f)
                     .background(MaterialTheme.colorScheme.surfaceVariant),
             ) {
-                if (memory.localUri != null) {
+                if (memory.displayUri() != null) {
                     AsyncImage(
-                        model = Uri.parse(memory.localUri),
+                        model = memory.displayUri(),
                         contentDescription = memory.caption ?: "Foto kenangan",
                         modifier = Modifier.fillMaxWidth(),
                         contentScale = ContentScale.Crop,
@@ -368,8 +413,9 @@ fun MemoryGridTile(
         onClick = onOpen,
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
     ) {
         Column {
             Box(
@@ -379,9 +425,9 @@ fun MemoryGridTile(
                     .clip(MaterialTheme.shapes.medium)
                     .background(MaterialTheme.colorScheme.surfaceVariant),
             ) {
-                if (memory.localUri != null) {
+                if (memory.displayUri() != null) {
                     AsyncImage(
-                        model = Uri.parse(memory.localUri),
+                        model = memory.displayUri(),
                         contentDescription = memory.caption ?: "Foto kenangan",
                         modifier = Modifier.fillMaxWidth(),
                         contentScale = ContentScale.Crop,
@@ -443,7 +489,7 @@ fun MemoryResurfacingLane(
                     modifier = Modifier.width(220.dp),
                     shape = MaterialTheme.shapes.large,
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
                     ),
                     elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                 ) {
@@ -476,9 +522,9 @@ fun MemoryResurfacingLane(
 
 @Composable
 fun MemoryThumbnail(memory: Memory, modifier: Modifier = Modifier.size(76.dp)) {
-    if (memory.localUri != null) {
+    if (memory.displayUri() != null) {
         AsyncImage(
-            model = Uri.parse(memory.localUri),
+            model = memory.displayUri(),
             contentDescription = memory.caption ?: "Foto kenangan",
             modifier = modifier
                 .clip(MaterialTheme.shapes.small),
@@ -495,6 +541,9 @@ fun MemoryThumbnail(memory: Memory, modifier: Modifier = Modifier.size(76.dp)) {
         }
     }
 }
+
+fun Memory.displayUri(): Uri? =
+    (localUri ?: remoteUrl)?.let(Uri::parse)
 
 @Composable
 fun SyncStatusIndicator(syncState: SyncState) {
@@ -520,6 +569,8 @@ fun SyncStatusIndicator(syncState: SyncState) {
 fun AlbumCard(
     album: Album,
     onClick: () -> Unit,
+    onDelete: (() -> Unit)? = null,
+    onRename: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     Card(
@@ -552,6 +603,16 @@ fun AlbumCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            if (onRename != null) {
+                IconButton(onClick = onRename) {
+                    Icon(Icons.Default.Edit, contentDescription = "Ubah nama album")
+                }
+            }
+            if (onDelete != null) {
+                IconButton(onClick = onDelete) {
+                    Icon(Icons.Default.DeleteOutline, contentDescription = "Pindahkan album ke trash")
+                }
+            }
             Icon(
                 Icons.AutoMirrored.Filled.ArrowForward,
                 contentDescription = "Buka album",
@@ -565,7 +626,7 @@ fun AlbumCard(
 fun PrivacyNotice(modifier: Modifier = Modifier) {
     Surface(
         modifier = modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.primaryContainer,
+        color = MaterialTheme.colorScheme.tertiaryContainer,
         shape = MaterialTheme.shapes.large,
     ) {
         Row(
@@ -588,7 +649,7 @@ fun PrivacyNotice(modifier: Modifier = Modifier) {
 
 @Composable
 fun StorageUsageIndicator(
-    bytes: Long,
+    usage: StorageUsage,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
@@ -596,19 +657,21 @@ fun StorageUsageIndicator(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text("Cloud storage", style = MaterialTheme.typography.titleMedium)
+            Text("Storage", style = MaterialTheme.typography.titleMedium)
             Text(
-                FileSizeFormatter.format(bytes),
+                FileSizeFormatter.format(usage.cloudBytes),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodyMedium,
             )
         }
         Spacer(Modifier.height(6.dp))
-        Text(
-            "Ukuran lokal yang tercatat pada perangkat ini",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text("Cloud ${FileSizeFormatter.format(usage.cloudBytes)}", style = MaterialTheme.typography.labelMedium)
+            Text("Lokal ${FileSizeFormatter.format(usage.localBytes)}", style = MaterialTheme.typography.labelMedium)
+            if (usage.pendingBytes > 0) {
+                Text("Menunggu ${FileSizeFormatter.format(usage.pendingBytes)}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.error)
+            }
+        }
     }
 }
 

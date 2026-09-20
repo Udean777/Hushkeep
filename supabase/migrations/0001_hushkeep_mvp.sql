@@ -58,21 +58,25 @@ alter table public.media_objects enable row level security;
 
 create policy "profiles are private to their owner"
 on public.profiles for all
+to authenticated
 using (id = auth.uid())
 with check (id = auth.uid());
 
 create policy "albums are private to their owner"
 on public.albums for all
+to authenticated
 using (owner_id = auth.uid())
 with check (owner_id = auth.uid());
 
 create policy "memories are private to their owner"
 on public.memories for all
+to authenticated
 using (owner_id = auth.uid())
 with check (owner_id = auth.uid());
 
 create policy "media metadata is private to their owner"
 on public.media_objects for all
+to authenticated
 using (owner_id = auth.uid())
 with check (owner_id = auth.uid());
 
@@ -82,6 +86,7 @@ on conflict (id) do update set public = false;
 
 create policy "private media can be read by its owner"
 on storage.objects for select
+to authenticated
 using (
     bucket_id = 'hushkeep-private'
     and (storage.foldername(name))[1] = auth.uid()::text
@@ -89,6 +94,7 @@ using (
 
 create policy "private media can be uploaded by its owner"
 on storage.objects for insert
+to authenticated
 with check (
     bucket_id = 'hushkeep-private'
     and (storage.foldername(name))[1] = auth.uid()::text
@@ -96,6 +102,7 @@ with check (
 
 create policy "private media can be updated by its owner"
 on storage.objects for update
+to authenticated
 using (
     bucket_id = 'hushkeep-private'
     and (storage.foldername(name))[1] = auth.uid()::text
@@ -107,6 +114,7 @@ with check (
 
 create policy "private media can be deleted by its owner"
 on storage.objects for delete
+to authenticated
 using (
     bucket_id = 'hushkeep-private'
     and (storage.foldername(name))[1] = auth.uid()::text

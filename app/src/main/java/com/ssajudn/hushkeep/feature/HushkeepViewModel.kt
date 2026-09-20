@@ -8,8 +8,12 @@ import com.ssajudn.hushkeep.core.common.AppResult
 import com.ssajudn.hushkeep.core.common.UiState
 import com.ssajudn.hushkeep.core.config.AppConfig
 import com.ssajudn.hushkeep.core.media.ExportManager
+import com.ssajudn.hushkeep.core.common.UserFacingMessages
 import com.ssajudn.hushkeep.domain.model.Memory
+import com.ssajudn.hushkeep.domain.model.MemorySearchFilters
 import com.ssajudn.hushkeep.domain.model.TrashItem
+import com.ssajudn.hushkeep.domain.model.StorageUsage
+import com.ssajudn.hushkeep.domain.model.UploadJob
 import com.ssajudn.hushkeep.domain.repository.AuthRepository
 import com.ssajudn.hushkeep.domain.repository.AuthState
 import com.ssajudn.hushkeep.domain.repository.MemoryRepository
@@ -19,6 +23,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.flatMapLatest
@@ -44,6 +49,13 @@ class HushkeepViewModel(
     init {
         viewModelScope.launch {
             authRepository.restoreSession()
+        }
+        viewModelScope.launch {
+            authState
+                .filterIsInstance<AuthState.SignedIn>()
+                .collectLatest { signedIn ->
+                    memoryRepository.refreshFromCloud(signedIn.user.id)
+                }
         }
     }
 
@@ -78,12 +90,13 @@ class HushkeepViewModel(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), UiState.Loading)
 
-    val storageUsage: StateFlow<Long> = signedInUserId
+    val storageUsage: StateFlow<StorageUsage> = signedInUserId
         .flatMapLatest(memoryRepository::observeStorageUsage)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0L)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), StorageUsage(0L, 0L, 0L))
 
-    val activeUploadCount: StateFlow<Int> = memoryRepository.observeActiveUploadCount()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
+    val uploadJobs: StateFlow<List<UploadJob>> = signedInUserId
+        .flatMapLatest(memoryRepository::observeUploadJobs)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     private val _messages = MutableSharedFlow<AppMessage>(extraBufferCapacity = 8)
     val messages = _messages.asSharedFlow()
@@ -95,14 +108,19 @@ class HushkeepViewModel(
         memoryRepository.observeByAlbum(ownerId, albumId)
     }
 
-    fun search(query: String): Flow<UiState<List<Memory>>> = observeMemories { ownerId ->
-        memoryRepository.search(ownerId, query)
+    fun search(filters: MemorySearchFilters): Flow<UiState<List<Memory>>> = observeMemories { ownerId ->
+        memoryRepository.search(ownerId, filters)
     }
 
     fun signIn(email: String, password: String) {
         viewModelScope.launch {
             authRepository.signIn(email, password).onFailure { report(it) }
         }
+    }
+
+    fun refreshCloud() {
+        val ownerId = (authState.value as? AuthState.SignedIn)?.user?.id ?: return
+        viewModelScope.launch { memoryRepository.refreshFromCloud(ownerId) }
     }
 
     fun signUp(username: String, email: String, password: String, confirmPassword: String) {
@@ -125,10 +143,33 @@ class HushkeepViewModel(
         }
     }
 
-    fun deleteAccount() {
+    fun verifySignupOtp(email: String, token: String) {
         viewModelScope.launch {
-            authRepository.deleteAccount()
-                .onSuccess { _messages.tryEmit(AppMessage.Text("Akun telah dihapus.")) }
+            authRepository.verifySignupOtp(email, token).onFailure { report(it) }
+        }
+    }
+
+    fun resendSignupOtp(email: String) {
+        viewModelScope.launch {
+            authRepository.resendSignupOtp(email).onFailure { report(it) }
+        }
+    }
+
+    fun deleteAccount(password: String) {
+        val ownerId = (authState.value as? AuthState.SignedIn)?.user?.id ?: return
+        viewModelScope.launch {
+            val reauth = authRepository.reauthenticate(password)
+            if (reauth is AppResult.Failure) {
+                report(reauth.error)
+                return@launch
+            }
+            val deleted = authRepository.deleteAccount()
+            if (deleted is AppResult.Failure) {
+                report(deleted.error)
+                return@launch
+            }
+            memoryRepository.clearLocalData(ownerId)
+                .onSuccess { _messages.tryEmit(AppMessage.Text("Akun dan data lokal telah dihapus.")) }
                 .onFailure { report(it) }
         }
     }
@@ -156,6 +197,24 @@ class HushkeepViewModel(
         viewModelScope.launch {
             memoryRepository.createAlbum(ownerId, name)
                 .onSuccess { _messages.tryEmit(AppMessage.Text("Album dibuat.")) }
+                .onFailure { report(it) }
+        }
+    }
+
+    fun renameAlbum(albumId: String, name: String) {
+        val ownerId = (authState.value as? AuthState.SignedIn)?.user?.id ?: return
+        viewModelScope.launch {
+            memoryRepository.renameAlbum(ownerId, albumId, name)
+                .onSuccess { _messages.tryEmit(AppMessage.Text("Album diubah.")) }
+                .onFailure { report(it) }
+        }
+    }
+
+    fun deleteAlbum(albumId: String) {
+        val ownerId = (authState.value as? AuthState.SignedIn)?.user?.id ?: return
+        viewModelScope.launch {
+            memoryRepository.deleteAlbum(ownerId, albumId)
+                .onSuccess { _messages.tryEmit(AppMessage.Text("Album dipindahkan ke trash.")) }
                 .onFailure { report(it) }
         }
     }
@@ -199,11 +258,57 @@ class HushkeepViewModel(
         }
     }
 
+    fun retryUpload(job: UploadJob) {
+        viewModelScope.launch {
+            memoryRepository.retryUpload(job.id).onFailure { report(it) }
+        }
+    }
+
+    fun retryFailedUploads() {
+        val ownerId = (authState.value as? AuthState.SignedIn)?.user?.id ?: return
+        viewModelScope.launch {
+            memoryRepository.retryFailedUploads(ownerId).onFailure { report(it) }
+        }
+    }
+
+    fun cancelUpload(job: UploadJob) {
+        viewModelScope.launch {
+            memoryRepository.cancelUpload(job.id).onFailure { report(it) }
+        }
+    }
+
     fun exportData(destination: Uri) {
         val ownerId = (authState.value as? AuthState.SignedIn)?.user?.id ?: return
         viewModelScope.launch {
             exportManager.exportAll(ownerId, destination)
                 .onSuccess { _messages.tryEmit(AppMessage.Text("Export selesai.")) }
+                .onFailure { report(it) }
+        }
+    }
+
+    fun exportMemory(memoryId: String, destination: Uri) {
+        val ownerId = (authState.value as? AuthState.SignedIn)?.user?.id ?: return
+        viewModelScope.launch {
+            exportManager.exportMemory(ownerId, memoryId, destination)
+                .onSuccess { _messages.tryEmit(AppMessage.Text("Foto berhasil diekspor.")) }
+                .onFailure { report(it) }
+        }
+    }
+
+    fun downloadPhoto(memoryId: String, destination: Uri) {
+        val ownerId = (authState.value as? AuthState.SignedIn)?.user?.id ?: return
+        viewModelScope.launch {
+            exportManager.downloadPhoto(ownerId, memoryId, destination)
+                .onSuccess { _messages.tryEmit(AppMessage.Text("Foto berhasil diunduh.")) }
+                .onFailure { report(it) }
+        }
+    }
+
+    fun exportAlbum(albumId: String, destination: Uri) {
+        val ownerId = (authState.value as? AuthState.SignedIn)?.user?.id ?: return
+        viewModelScope.launch {
+            exportManager.exportAlbum(ownerId, albumId, destination)
+                .onSuccess { _messages.tryEmit(AppMessage.Text("Album berhasil diekspor.")) }
                 .onFailure { report(it) }
         }
     }
@@ -222,15 +327,6 @@ class HushkeepViewModel(
     }
 
     private fun report(error: AppError) {
-        val message = when (error) {
-            AppError.NotFound -> "Data tidak ditemukan."
-            AppError.NetworkUnavailable -> "Koneksi belum tersedia."
-            is AppError.Validation -> error.message
-            is AppError.Remote -> error.message
-            is AppError.Storage -> error.message
-            AppError.AuthenticationRequired -> "Sesi diperlukan."
-            AppError.Unknown -> "Terjadi kesalahan."
-        }
-        _messages.tryEmit(AppMessage.Text(message))
+        _messages.tryEmit(AppMessage.Text(UserFacingMessages.forError(error)))
     }
 }

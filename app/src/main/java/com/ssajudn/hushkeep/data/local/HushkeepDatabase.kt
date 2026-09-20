@@ -12,6 +12,8 @@ import com.ssajudn.hushkeep.data.local.entity.AlbumEntity
 import com.ssajudn.hushkeep.data.local.entity.MediaObjectEntity
 import com.ssajudn.hushkeep.data.local.entity.MemoryEntity
 import com.ssajudn.hushkeep.data.local.entity.UploadJobEntity
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [
@@ -20,7 +22,7 @@ import com.ssajudn.hushkeep.data.local.entity.UploadJobEntity
         MediaObjectEntity::class,
         UploadJobEntity::class,
     ],
-    version = 1,
+    version = 3,
     exportSchema = false,
 )
 abstract class HushkeepDatabase : RoomDatabase() {
@@ -41,7 +43,22 @@ abstract class HushkeepDatabase : RoomDatabase() {
                     context.applicationContext,
                     HushkeepDatabase::class.java,
                     DATABASE_NAME,
-                ).build().also { instance = it }
+                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build().also { instance = it }
+            }
+        }
+
+        private val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE memories ADD COLUMN remoteUrl TEXT")
+            }
+        }
+
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE upload_jobs ADD COLUMN fileName TEXT")
+                db.execSQL("ALTER TABLE upload_jobs ADD COLUMN totalBytes INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE upload_jobs ADD COLUMN bytesTransferred INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE upload_jobs ADD COLUMN progressPercent INTEGER NOT NULL DEFAULT 0")
             }
         }
     }

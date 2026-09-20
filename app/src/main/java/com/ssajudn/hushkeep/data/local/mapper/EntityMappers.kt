@@ -44,6 +44,7 @@ fun MemoryEntity.toDomain(): Memory = Memory(
     syncState = SyncState.fromStorage(syncState),
     deletedAt = deletedAtEpochMs?.let(Instant::ofEpochMilli),
     localUri = localUri,
+    remoteUrl = remoteUrl,
 )
 
 fun Memory.toEntity(): MemoryEntity = MemoryEntity(
@@ -58,6 +59,7 @@ fun Memory.toEntity(): MemoryEntity = MemoryEntity(
     syncState = syncState.name,
     deletedAtEpochMs = deletedAt?.toEpochMilli(),
     localUri = localUri,
+    remoteUrl = remoteUrl,
 )
 
 fun MediaObjectEntity.toDomain(): MediaObject = MediaObject(
@@ -96,6 +98,10 @@ fun UploadJobEntity.toDomain(): UploadJob = UploadJob(
     id = id,
     mediaObjectId = mediaObjectId,
     localUri = localUri,
+    fileName = fileName,
+    totalBytes = totalBytes,
+    bytesTransferred = bytesTransferred,
+    progressPercent = progressPercent,
     status = UploadStatus.fromStorage(status),
     attemptCount = attemptCount,
     lastError = lastError,
@@ -108,6 +114,10 @@ fun UploadJob.toEntity(): UploadJobEntity = UploadJobEntity(
     id = id,
     mediaObjectId = mediaObjectId,
     localUri = localUri,
+    fileName = fileName,
+    totalBytes = totalBytes,
+    bytesTransferred = bytesTransferred,
+    progressPercent = progressPercent,
     status = status.name,
     attemptCount = attemptCount,
     lastError = lastError,

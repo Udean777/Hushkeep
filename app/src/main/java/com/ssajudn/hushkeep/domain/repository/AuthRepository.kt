@@ -30,4 +30,10 @@ interface AuthRepository {
     suspend fun signOut(): AppResult<Unit>
 
     suspend fun deleteAccount(): AppResult<Unit>
+
+    suspend fun reauthenticate(password: String): AppResult<Unit>
+
+    suspend fun verifySignupOtp(email: String, token: String): AppResult<AuthUser>
+
+    suspend fun resendSignupOtp(email: String): AppResult<Unit>
 }

@@ -19,6 +19,8 @@ class UploadQueue(
     suspend fun enqueue(
         mediaObjectId: String,
         localUri: String,
+        fileName: String? = null,
+        totalBytes: Long = 0L,
         jobId: String = UUID.randomUUID().toString(),
     ): UploadJob {
         val now = clock.now()
@@ -26,6 +28,10 @@ class UploadQueue(
             id = jobId,
             mediaObjectId = mediaObjectId,
             localUri = localUri,
+            fileName = fileName,
+            totalBytes = totalBytes,
+            bytesTransferred = 0L,
+            progressPercent = 0,
             status = UploadStatus.QUEUED,
             attemptCount = 0,
             lastError = null,
@@ -42,6 +48,30 @@ class UploadQueue(
         )
         return job
     }
+
+    suspend fun retry(jobId: String): Boolean {
+        val existing = uploadJobDao.findById(jobId) ?: return false
+        val updated = uploadJobDao.updateStatus(
+            jobId = existing.id,
+            status = UploadStatus.QUEUED.name,
+            attemptCount = existing.attemptCount,
+            lastError = null,
+            nextAttemptAtEpochMs = null,
+            updatedAtEpochMs = clock.now().toEpochMilli(),
+        )
+        if (updated > 0) {
+            uploadJobDao.updateProgress(jobId, 0L, 0, clock.now().toEpochMilli())
+            workManager.enqueueUniqueWork(
+                uniqueWorkName(jobId),
+                ExistingWorkPolicy.REPLACE,
+                UploadWorkRequestFactory.create(jobId),
+            )
+        }
+        return updated > 0
+    }
+
+    suspend fun retryAll(ownerId: String): Int =
+        uploadJobDao.findFailedForOwner(ownerId).count { retry(it.id) }
 
     suspend fun cancel(jobId: String): Boolean {
         val existing = uploadJobDao.findById(jobId) ?: return false

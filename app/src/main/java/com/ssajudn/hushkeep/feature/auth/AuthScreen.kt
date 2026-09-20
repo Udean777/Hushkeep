@@ -19,9 +19,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -39,6 +41,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.ssajudn.hushkeep.core.ui.components.MemoryRibbonMark
 import com.ssajudn.hushkeep.domain.repository.AuthState
+import com.ssajudn.hushkeep.ui.theme.ArchiveHeroTypography
+import com.ssajudn.hushkeep.ui.theme.HushkeepPillShape
 
 @Composable
 fun AuthLoadingScreen() {
@@ -67,6 +71,7 @@ fun AuthScreen(
     localPreviewEnabled: Boolean,
     onSignIn: (String, String) -> Unit,
     onSignUp: (String, String, String, String) -> Unit,
+    onOpenPrivacyPolicy: () -> Unit,
 ) {
     var username by rememberSaveable { mutableStateOf("") }
     var email by rememberSaveable { mutableStateOf("") }
@@ -114,7 +119,7 @@ fun AuthScreen(
         Spacer(Modifier.height(18.dp))
         Text(
             if (isSignUp) "Buat ruang pribadi" else "Masuk ke ruang pribadi",
-            style = MaterialTheme.typography.displaySmall,
+            style = ArchiveHeroTypography,
         )
         Spacer(Modifier.height(8.dp))
         Text(
@@ -127,7 +132,7 @@ fun AuthScreen(
             modifier = Modifier.fillMaxWidth(),
             color = MaterialTheme.colorScheme.surface,
             shape = MaterialTheme.shapes.large,
-            tonalElevation = 1.dp,
+            tonalElevation = 2.dp,
         ) {
             Column(Modifier.padding(18.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -160,6 +165,7 @@ fun AuthScreen(
                 label = { Text("Username") },
                 supportingText = { Text("3 sampai 32 karakter.") },
                 singleLine = true,
+                colors = authFieldColors(),
             )
             Spacer(Modifier.height(12.dp))
         }
@@ -170,6 +176,7 @@ fun AuthScreen(
             label = { Text("Email") },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+            colors = authFieldColors(),
         )
         Spacer(Modifier.height(12.dp))
         OutlinedTextField(
@@ -180,6 +187,7 @@ fun AuthScreen(
             singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            colors = authFieldColors(),
         )
         if (isSignUp) {
             Spacer(Modifier.height(12.dp))
@@ -191,6 +199,7 @@ fun AuthScreen(
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                colors = authFieldColors(),
             )
         }
         if (authState is AuthState.Error) {
@@ -210,6 +219,11 @@ fun AuthScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp),
+            shape = HushkeepPillShape,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+            ),
         ) {
             if (isLoading) {
                 CircularProgressIndicator(
@@ -227,5 +241,18 @@ fun AuthScreen(
         ) {
             Text(if (isSignUp) "Sudah punya akun? Masuk" else "Belum punya akun? Buat akun")
         }
+        TextButton(onClick = onOpenPrivacyPolicy, modifier = Modifier.fillMaxWidth()) {
+            Text("Privacy policy")
+        }
     }
 }
+
+@Composable
+private fun authFieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedBorderColor = MaterialTheme.colorScheme.primary,
+    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+    focusedLabelColor = MaterialTheme.colorScheme.primary,
+    cursorColor = MaterialTheme.colorScheme.primary,
+    focusedContainerColor = MaterialTheme.colorScheme.surface,
+    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+)

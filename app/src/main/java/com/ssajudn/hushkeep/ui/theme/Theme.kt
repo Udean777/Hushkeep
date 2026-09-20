@@ -1,21 +1,29 @@
 package com.ssajudn.hushkeep.ui.theme
 
+import android.app.Activity
+import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 
 private val DarkColorScheme = darkColorScheme(
-    primary = HushkeepMossLight,
+    primary = HushkeepCoralLight,
     onPrimary = HushkeepNight,
     primaryContainer = HushkeepNightMossContainer,
-    onPrimaryContainer = HushkeepMossLight,
-    secondary = HushkeepClayLight,
+    onPrimaryContainer = HushkeepCoralLight,
+    secondary = HushkeepSunLight,
     onSecondary = HushkeepNight,
     secondaryContainer = HushkeepNightClayContainer,
-    onSecondaryContainer = Color(0xFFFFD9CC),
+    onSecondaryContainer = HushkeepSunLight,
+    tertiary = HushkeepMint,
+    onTertiary = HushkeepNight,
+    tertiaryContainer = HushkeepNightMintContainer,
+    onTertiaryContainer = HushkeepMint,
     background = HushkeepNight,
     onBackground = HushkeepPaper,
     surface = HushkeepNightSurface,
@@ -23,32 +31,38 @@ private val DarkColorScheme = darkColorScheme(
     surfaceVariant = HushkeepNightElevated,
     onSurfaceVariant = HushkeepNightMuted,
     outline = HushkeepNightLine,
-    error = Color(0xFFFFB4AB),
-    onError = Color(0xFF690005),
-    errorContainer = Color(0xFF93000A),
-    onErrorContainer = Color(0xFFFFDAD6),
+    outlineVariant = HushkeepNightLine,
+    error = HushkeepCoralLight,
+    onError = HushkeepNight,
+    errorContainer = HushkeepNightMossContainer,
+    onErrorContainer = HushkeepCoralLight,
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = HushkeepMoss,
-    onPrimary = HushkeepSurfaceElevated,
-    primaryContainer = Color(0xFFD3E2D3),
-    onPrimaryContainer = Color(0xFF183A29),
-    secondary = HushkeepClay,
-    onSecondary = HushkeepSurfaceElevated,
-    secondaryContainer = HushkeepClayContainer,
-    onSecondaryContainer = Color(0xFF3A0B02),
+    primary = HushkeepCoral,
+    onPrimary = HushkeepInk,
+    primaryContainer = HushkeepCoralContainer,
+    onPrimaryContainer = HushkeepInk,
+    secondary = HushkeepSun,
+    onSecondary = HushkeepInk,
+    secondaryContainer = HushkeepSunContainer,
+    onSecondaryContainer = HushkeepInk,
+    tertiary = HushkeepMint,
+    onTertiary = HushkeepInk,
+    tertiaryContainer = HushkeepMintContainer,
+    onTertiaryContainer = HushkeepInk,
     background = HushkeepPaper,
     onBackground = HushkeepInk,
     surface = HushkeepSurface,
     onSurface = HushkeepInk,
-    surfaceVariant = Color(0xFFE7E4DB),
+    surfaceVariant = HushkeepSkyContainer,
     onSurfaceVariant = HushkeepMutedInk,
     outline = HushkeepLine,
-    error = Color(0xFFBA1A1A),
-    onError = Color.White,
-    errorContainer = Color(0xFFFFDAD6),
-    onErrorContainer = Color(0xFF410002),
+    outlineVariant = HushkeepLine,
+    error = HushkeepCoralPressed,
+    onError = HushkeepSurfaceElevated,
+    errorContainer = HushkeepCoralContainer,
+    onErrorContainer = HushkeepInk,
 )
 
 @Composable
@@ -57,6 +71,22 @@ fun HushkeepTheme(
     content: @Composable () -> Unit
 ) {
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
+    val view = LocalView.current
+
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as? Activity)?.window ?: return@SideEffect
+            val controller = WindowCompat.getInsetsController(window, view)
+
+            // ThemeMode can override the device theme, so do not rely only on
+            // ComponentActivity.enableEdgeToEdge()'s system-mode detection.
+            controller.isAppearanceLightStatusBars = !darkTheme
+            controller.isAppearanceLightNavigationBars = !darkTheme
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                window.isNavigationBarContrastEnforced = false
+            }
+        }
+    }
 
     MaterialTheme(
         colorScheme = colorScheme,

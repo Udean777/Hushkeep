@@ -17,6 +17,9 @@ interface AlbumDao {
     )
     fun observeActive(ownerId: String): Flow<List<AlbumEntity>>
 
+    @Query("SELECT * FROM albums WHERE ownerId = :ownerId")
+    suspend fun findAllForOwner(ownerId: String): List<AlbumEntity>
+
     @Query("SELECT * FROM albums WHERE id = :albumId LIMIT 1")
     suspend fun findById(albumId: String): AlbumEntity?
 
@@ -51,6 +54,14 @@ interface AlbumDao {
 
     @Query(
         """
+        UPDATE albums SET name = :name, updatedAtEpochMs = :updatedAtEpochMs
+        WHERE id = :albumId AND ownerId = :ownerId AND deletedAtEpochMs IS NULL
+        """,
+    )
+    suspend fun rename(albumId: String, ownerId: String, name: String, updatedAtEpochMs: Long): Int
+
+    @Query(
+        """
         UPDATE albums
         SET deletedAtEpochMs = NULL, updatedAtEpochMs = :updatedAtEpochMs
         WHERE id = :albumId AND ownerId = :ownerId
@@ -60,4 +71,7 @@ interface AlbumDao {
 
     @Query("DELETE FROM albums WHERE id = :albumId AND ownerId = :ownerId")
     suspend fun permanentlyDelete(albumId: String, ownerId: String): Int
+
+    @Query("DELETE FROM albums WHERE ownerId = :ownerId")
+    suspend fun deleteAllForOwner(ownerId: String): Int
 }

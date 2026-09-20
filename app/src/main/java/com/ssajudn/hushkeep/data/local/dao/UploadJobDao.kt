@@ -38,6 +38,21 @@ interface UploadJobDao {
         updatedAtEpochMs: Long,
     ): Int
 
+    @Query(
+        """
+        UPDATE upload_jobs
+        SET bytesTransferred = :bytesTransferred, progressPercent = :progressPercent,
+            updatedAtEpochMs = :updatedAtEpochMs
+        WHERE id = :jobId
+        """,
+    )
+    suspend fun updateProgress(
+        jobId: String,
+        bytesTransferred: Long,
+        progressPercent: Int,
+        updatedAtEpochMs: Long,
+    ): Int
+
     @Upsert
     suspend fun upsert(job: UploadJobEntity)
 
@@ -50,8 +65,38 @@ interface UploadJobDao {
     @Query(
         """
         SELECT COUNT(*) FROM upload_jobs
-        WHERE status IN ('QUEUED', 'PREPARING', 'READY_FOR_UPLOAD', 'UPLOADING', 'FAILED')
+        INNER JOIN media_objects ON media_objects.id = upload_jobs.mediaObjectId
+        WHERE media_objects.ownerId = :ownerId
+          AND upload_jobs.status IN ('QUEUED', 'PREPARING', 'READY_FOR_UPLOAD', 'UPLOADING', 'FAILED')
         """,
     )
-    fun observeActiveCount(): Flow<Int>
+    fun observeActiveCount(ownerId: String): Flow<Int>
+
+    @Query(
+        """
+        SELECT upload_jobs.* FROM upload_jobs
+        INNER JOIN media_objects ON media_objects.id = upload_jobs.mediaObjectId
+        WHERE media_objects.ownerId = :ownerId
+          AND upload_jobs.status IN ('QUEUED', 'PREPARING', 'READY_FOR_UPLOAD', 'UPLOADING', 'FAILED')
+        ORDER BY upload_jobs.createdAtEpochMs ASC
+        """,
+    )
+    fun observeForOwner(ownerId: String): Flow<List<UploadJobEntity>>
+
+    @Query(
+        """
+        SELECT upload_jobs.* FROM upload_jobs
+        INNER JOIN media_objects ON media_objects.id = upload_jobs.mediaObjectId
+        WHERE media_objects.ownerId = :ownerId AND upload_jobs.status = 'FAILED'
+        """,
+    )
+    suspend fun findFailedForOwner(ownerId: String): List<UploadJobEntity>
+
+    @Query(
+        """
+        DELETE FROM upload_jobs
+        WHERE mediaObjectId IN (SELECT id FROM media_objects WHERE ownerId = :ownerId)
+        """,
+    )
+    suspend fun deleteAllForOwner(ownerId: String): Int
 }

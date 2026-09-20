@@ -1,7 +1,7 @@
 /*
- * Hallmark · genre: editorial · macrostructure: Ecosystem Index · theme: DESIGN.md
+ * Hallmark · genre: playful editorial · macrostructure: Workbench · theme: bright memory archive
  * designed-as-app · tone: gallery / canvas-first · motion: restrained
- * pre-emit critique: P5 H4 E4 S5 R4 V4
+ * pre-emit critique: P5 H5 E4 S5 R4 V5
  */
 package com.ssajudn.hushkeep.feature.main
 
@@ -36,13 +36,15 @@ fun MemoryListContent(
     onFavorite: (Memory) -> Unit,
     onDelete: (Memory) -> Unit,
     onOpen: (Memory) -> Unit,
+    emptyTitle: String = "Belum ada kenangan",
+    emptyDescription: String = "Pilih foto dari galeri untuk mulai mengisi ruang pribadi ini.",
     modifier: Modifier = Modifier,
 ) {
     when (state) {
         UiState.Loading -> LoadingState(modifier)
         UiState.Empty -> EmptyState(
-            title = "Belum ada kenangan",
-            description = "Pilih foto dari galeri untuk mulai mengisi ruang pribadi ini.",
+            title = emptyTitle,
+            description = emptyDescription,
             modifier = modifier,
         )
         is UiState.Error -> ErrorState(
@@ -53,7 +55,7 @@ fun MemoryListContent(
             modifier = modifier.fillMaxSize(),
         ) {
             val columns = if (maxWidth >= 720.dp) 3 else 2
-            val horizontalPadding = if (maxWidth >= 840.dp) 32.dp else 20.dp
+            val horizontalPadding = if (maxWidth >= 840.dp) 36.dp else 22.dp
             val groups = state.value.groupBy { memory ->
                 HushkeepDateTimeFormatter.timelineDay(memory.capturedAt)
             }
@@ -104,7 +106,7 @@ fun MemoryListContent(
                         item(key = "row-$date-$rowIndex") {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                horizontalArrangement = Arrangement.spacedBy(14.dp),
                             ) {
                                 row.forEachIndexed { tileIndex, memory ->
                                     MemoryGridTile(

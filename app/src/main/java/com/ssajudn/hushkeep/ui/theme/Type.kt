@@ -9,26 +9,27 @@ import androidx.compose.ui.unit.sp
 val Typography = Typography(
     displaySmall = TextStyle(
         fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 32.sp,
+        fontWeight = FontWeight.Bold,
+        fontSize = 34.sp,
         lineHeight = 38.sp,
-        letterSpacing = (-0.4).sp,
+        letterSpacing = (-0.8).sp,
     ),
     headlineSmall = TextStyle(
         fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 24.sp,
+        fontWeight = FontWeight.Bold,
+        fontSize = 25.sp,
         lineHeight = 30.sp,
+        letterSpacing = (-0.35).sp,
     ),
     titleLarge = TextStyle(
         fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = FontWeight.Bold,
         fontSize = 22.sp,
         lineHeight = 28.sp,
     ),
     titleMedium = TextStyle(
         fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = FontWeight.Bold,
         fontSize = 16.sp,
         lineHeight = 22.sp,
     ),
@@ -48,16 +49,16 @@ val Typography = Typography(
     ),
     labelLarge = TextStyle(
         fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = FontWeight.Bold,
         fontSize = 14.sp,
         lineHeight = 20.sp,
     ),
     labelMedium = TextStyle(
         fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = FontWeight.Bold,
         fontSize = 12.sp,
         lineHeight = 16.sp,
-        letterSpacing = 0.2.sp,
+        letterSpacing = 0.45.sp,
     ),
 )
 
@@ -71,7 +72,23 @@ val ArchiveDateTypography = TextStyle(
 val ArchiveTitleTypography = TextStyle(
     fontFamily = FontFamily.Serif,
     fontWeight = FontWeight.Normal,
-    fontSize = 28.sp,
-    lineHeight = 34.sp,
-    letterSpacing = (-0.2).sp,
+    fontSize = 30.sp,
+    lineHeight = 35.sp,
+    letterSpacing = (-0.35).sp,
+)
+
+val ArchiveHeroTypography = TextStyle(
+    fontFamily = FontFamily.Serif,
+    fontWeight = FontWeight.Normal,
+    fontSize = 38.sp,
+    lineHeight = 42.sp,
+    letterSpacing = (-0.6).sp,
+)
+
+val ArchiveMetaTypography = TextStyle(
+    fontFamily = FontFamily.SansSerif,
+    fontWeight = FontWeight.Bold,
+    fontSize = 11.sp,
+    lineHeight = 14.sp,
+    letterSpacing = 0.8.sp,
 )

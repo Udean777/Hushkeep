@@ -2,6 +2,7 @@ package com.ssajudn.hushkeep.data.local
 
 import com.ssajudn.hushkeep.core.common.AppError
 import com.ssajudn.hushkeep.core.common.AppResult
+import com.ssajudn.hushkeep.core.common.OtpPolicy
 import com.ssajudn.hushkeep.core.common.UsernamePolicy
 import com.ssajudn.hushkeep.domain.repository.AuthRepository
 import com.ssajudn.hushkeep.domain.repository.AuthState
@@ -86,4 +87,25 @@ class LocalPreviewAuthRepository(
         _state.value = AuthState.SignedOut
         return AppResult.Success(Unit)
     }
+
+    override suspend fun reauthenticate(password: String): AppResult<Unit> =
+        if (password.isBlank()) {
+            AppResult.Failure(AppError.Validation("Password wajib diisi."))
+        } else {
+            AppResult.Success(Unit)
+        }
+
+    override suspend fun verifySignupOtp(email: String, token: String): AppResult<AuthUser> {
+        if (!OtpPolicy.isValid(token)) {
+            return AppResult.Failure(AppError.Validation("Kode verifikasi harus 6 digit."))
+        }
+        return signIn(email, "local-preview-otp")
+    }
+
+    override suspend fun resendSignupOtp(email: String): AppResult<Unit> =
+        if (email.isBlank()) {
+            AppResult.Failure(AppError.Validation("Email wajib diisi."))
+        } else {
+            AppResult.Success(Unit)
+        }
 }

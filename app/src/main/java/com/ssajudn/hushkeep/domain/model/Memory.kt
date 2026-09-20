@@ -14,4 +14,5 @@ data class Memory(
     val syncState: SyncState,
     val deletedAt: Instant?,
     val localUri: String? = null,
+    val remoteUrl: String? = null,
 )

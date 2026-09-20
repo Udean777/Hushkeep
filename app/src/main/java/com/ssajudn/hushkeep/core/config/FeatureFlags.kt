@@ -10,6 +10,7 @@ object FeatureFlags {
     const val photoImport = true
     const val favorites = true
     const val trash = true
+    const val otpEnabled = false
 
     const val video = false
     const val sharedAlbums = false

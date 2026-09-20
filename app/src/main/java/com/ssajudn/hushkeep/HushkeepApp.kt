@@ -11,6 +11,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ssajudn.hushkeep.domain.repository.AuthState
 import com.ssajudn.hushkeep.feature.AppMessage
@@ -46,6 +48,9 @@ fun HushkeepApp() {
     val snackbarHostState = SnackbarHostState()
 
     HushkeepTheme(darkTheme = isDarkTheme) {
+        LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+            viewModel.refreshCloud()
+        }
         LaunchedEffect(viewModel) {
             viewModel.messages.collect { message ->
                 when (message) {
@@ -67,6 +72,8 @@ fun HushkeepApp() {
                     localPreviewEnabled = viewModel.localPreviewEnabled,
                     onSignIn = viewModel::signIn,
                     onSignUp = viewModel::signUp,
+                    onVerifyOtp = viewModel::verifySignupOtp,
+                    onResendOtp = viewModel::resendSignupOtp,
                 )
             }
         }

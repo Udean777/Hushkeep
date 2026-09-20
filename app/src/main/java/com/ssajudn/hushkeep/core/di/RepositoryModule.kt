@@ -23,10 +23,12 @@ object RepositoryModule {
         context: Context,
         database: HushkeepDatabase,
         workManager: WorkManager,
+        client: SupabaseClient?,
     ): MemoryRepository = LocalMemoryRepository(
         database = database,
         contentResolver = context.applicationContext.contentResolver,
         mediaDirectory = File(context.applicationContext.filesDir, "hushkeep-media"),
         workManager = workManager,
+        supabaseClient = client,
     )
 }

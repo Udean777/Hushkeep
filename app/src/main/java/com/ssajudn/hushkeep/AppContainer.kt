@@ -16,19 +16,21 @@ import com.ssajudn.hushkeep.domain.repository.MemoryRepository
  */
 class AppContainer(context: Context) {
     private val appContext = context.applicationContext
+    private val supabaseClient = NetworkModule.provideSupabaseClient()
 
     val database: HushkeepDatabase = DatabaseModule.provideDatabase(appContext)
     val sessionStore: SessionStore = SessionStore(appContext)
     val workManager = DatabaseModule.provideWorkManager(appContext)
-    val exportManager = AppModule.provideExportManager(appContext, database)
+    val exportManager = AppModule.provideExportManager(appContext, database, supabaseClient)
     val memoryRepository: MemoryRepository = RepositoryModule.provideMemoryRepository(
         context = appContext,
         database = database,
         workManager = workManager,
+        client = supabaseClient,
     )
 
     val authRepository: AuthRepository = RepositoryModule.provideAuthRepository(
-        client = NetworkModule.provideSupabaseClient(),
+        client = supabaseClient,
         sessionStore = sessionStore,
     )
 }

@@ -7,6 +7,7 @@ import androidx.work.WorkerParameters
 import com.ssajudn.hushkeep.core.common.Clock
 import com.ssajudn.hushkeep.core.common.MimeTypeResolver
 import com.ssajudn.hushkeep.core.common.RetryPolicy
+import com.ssajudn.hushkeep.core.common.UserFacingMessages
 import com.ssajudn.hushkeep.core.common.UriResolver
 import com.ssajudn.hushkeep.core.config.StoragePaths
 import com.ssajudn.hushkeep.core.network.SupabaseClientProvider
@@ -15,6 +16,7 @@ import com.ssajudn.hushkeep.domain.model.UploadStatus
 import com.ssajudn.hushkeep.domain.model.SyncState
 import io.github.jan.supabase.storage.storage
 import java.time.Instant
+import java.io.ByteArrayOutputStream
 
 /**
  * Runs one idempotent media upload. The media id is part of the object path,
@@ -43,17 +45,47 @@ class UploadWorker(
             nextAttemptAtEpochMs = null,
             updatedAtEpochMs = now.toEpochMilli(),
         )
+        database.uploadJobDao().updateProgress(job.id, 0L, 0, now.toEpochMilli())
+        database.mediaObjectDao().findById(job.mediaObjectId)?.let { media ->
+            database.memoryDao().updateSyncState(
+                memoryId = media.memoryId,
+                ownerId = media.ownerId,
+                syncState = SyncState.SYNCING.name,
+                updatedAtEpochMs = now.toEpochMilli(),
+            )
+        }
 
         val localUri = Uri.parse(job.localUri)
         if (!uriResolver.canRead(localUri)) {
-            return handleFailure(job.id, job.attemptCount, now, "Local media could not be read")
+            return handleFailure(
+                job.id,
+                job.mediaObjectId,
+                job.attemptCount,
+                now,
+                UserFacingMessages.LOCAL_MEDIA_UNAVAILABLE,
+            )
         }
 
         val supabase = SupabaseClientProvider.create()
         if (supabase == null) {
+            database.mediaObjectDao().findById(job.mediaObjectId)?.let { media ->
+                database.mediaObjectDao().updateSyncState(
+                    mediaObjectId = media.id,
+                    syncState = SyncState.PENDING.name,
+                    storagePath = media.storagePath,
+                    updatedAtEpochMs = now.toEpochMilli(),
+                )
+                database.memoryDao().updateSyncState(
+                    memoryId = media.memoryId,
+                    ownerId = media.ownerId,
+                    syncState = SyncState.PENDING.name,
+                    updatedAtEpochMs = now.toEpochMilli(),
+                )
+            }
+            database.uploadJobDao().updateProgress(job.id, job.totalBytes, 100, now.toEpochMilli())
             database.uploadJobDao().updateStatus(
                 jobId = job.id,
-                status = UploadStatus.READY_FOR_UPLOAD.name,
+                status = UploadStatus.COMPLETED.name,
                 attemptCount = job.attemptCount,
                 lastError = null,
                 nextAttemptAtEpochMs = null,
@@ -63,13 +95,40 @@ class UploadWorker(
         }
 
         val media = database.mediaObjectDao().findById(job.mediaObjectId)
-            ?: return handleFailure(job.id, job.attemptCount, now, "Media object tidak ditemukan")
-        val bytes = uriResolver.openInputStream(localUri)
-            ?.use { it.readBytes() }
-            ?: return handleFailure(job.id, job.attemptCount, now, "File lokal tidak dapat dibuka")
+            ?: return handleFailure(
+                job.id,
+                job.mediaObjectId,
+                job.attemptCount,
+                now,
+                UserFacingMessages.UPLOAD_FAILED,
+            )
+        val bytes = readBytesWithProgress(job)
+            ?: return handleFailure(
+                job.id,
+                job.mediaObjectId,
+                job.attemptCount,
+                now,
+                UserFacingMessages.LOCAL_MEDIA_UNAVAILABLE,
+            )
         if (bytes.isEmpty()) {
-            return handleFailure(job.id, job.attemptCount, now, "File lokal kosong")
+            return handleFailure(
+                job.id,
+                job.mediaObjectId,
+                job.attemptCount,
+                now,
+                UserFacingMessages.UPLOAD_FAILED,
+            )
         }
+
+        database.uploadJobDao().updateStatus(
+            jobId = job.id,
+            status = UploadStatus.UPLOADING.name,
+            attemptCount = job.attemptCount,
+            lastError = null,
+            nextAttemptAtEpochMs = null,
+            updatedAtEpochMs = clock.now().toEpochMilli(),
+        )
+        setProgress(androidx.work.workDataOf("phase" to UploadStatus.UPLOADING.name))
 
         return try {
             val extension = MimeTypeResolver.extensionForMimeType(media.mimeType)
@@ -83,6 +142,14 @@ class UploadWorker(
                 storagePath = storagePath,
                 updatedAtEpochMs = now.toEpochMilli(),
             )
+            database.memoryDao().updateSyncState(
+                memoryId = media.memoryId,
+                ownerId = media.ownerId,
+                syncState = SyncState.SYNCING.name,
+                updatedAtEpochMs = now.toEpochMilli(),
+            )
+            database.uploadJobDao().updateProgress(job.id, bytes.size.toLong(), 100, now.toEpochMilli())
+            setProgress(androidx.work.workDataOf("progress_percent" to 100))
             database.uploadJobDao().updateStatus(
                 jobId = job.id,
                 status = UploadStatus.COMPLETED.name,
@@ -91,14 +158,23 @@ class UploadWorker(
                 nextAttemptAtEpochMs = null,
                 updatedAtEpochMs = now.toEpochMilli(),
             )
+            CloudSyncQueue(androidx.work.WorkManager.getInstance(applicationContext))
+                .enqueue(media.ownerId)
             Result.success()
         } catch (error: Throwable) {
-            handleFailure(job.id, job.attemptCount, now, error.message ?: "Upload gagal")
+            handleFailure(
+                job.id,
+                job.mediaObjectId,
+                job.attemptCount,
+                now,
+                UserFacingMessages.UPLOAD_FAILED,
+            )
         }
     }
 
     private suspend fun handleFailure(
         jobId: String,
+        mediaObjectId: String,
         currentAttemptCount: Int,
         now: Instant,
         message: String,
@@ -115,7 +191,40 @@ class UploadWorker(
             nextAttemptAtEpochMs = nextAttemptAt.toEpochMilli().takeIf { shouldRetry },
             updatedAtEpochMs = now.toEpochMilli(),
         )
+        database.mediaObjectDao().findById(mediaObjectId)?.let { media ->
+            database.memoryDao().updateSyncState(
+                memoryId = media.memoryId,
+                ownerId = media.ownerId,
+                syncState = SyncState.FAILED.name,
+                updatedAtEpochMs = now.toEpochMilli(),
+            )
+        }
 
         return if (shouldRetry) Result.retry() else Result.failure()
+    }
+
+    private suspend fun readBytesWithProgress(job: com.ssajudn.hushkeep.data.local.entity.UploadJobEntity): ByteArray? {
+        val input = uriResolver.openInputStream(Uri.parse(job.localUri)) ?: return null
+        return input.use { stream ->
+            val output = ByteArrayOutputStream()
+            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+            var total = 0L
+            var lastPercent = -1
+            while (true) {
+                val count = stream.read(buffer)
+                if (count < 0) break
+                output.write(buffer, 0, count)
+                total += count
+                val percent = if (job.totalBytes > 0) {
+                    ((total * 100L) / job.totalBytes).toInt().coerceIn(0, 99)
+                } else 0
+                if (percent != lastPercent && percent % 5 == 0) {
+                    lastPercent = percent
+                    database.uploadJobDao().updateProgress(job.id, total, percent, clock.now().toEpochMilli())
+                    setProgress(androidx.work.workDataOf("progress_percent" to percent))
+                }
+            }
+            output.toByteArray()
+        }
     }
 }

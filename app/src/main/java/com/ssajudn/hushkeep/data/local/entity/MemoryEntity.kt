@@ -26,4 +26,5 @@ data class MemoryEntity(
     val syncState: String,
     val deletedAtEpochMs: Long?,
     val localUri: String?,
+    val remoteUrl: String?,
 )
