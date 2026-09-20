@@ -49,7 +49,7 @@ fun HushkeepApp() {
 
     HushkeepTheme(darkTheme = isDarkTheme) {
         LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
-            viewModel.refreshCloud()
+            viewModel.ensureRealtime()
         }
         LaunchedEffect(viewModel) {
             viewModel.messages.collect { message ->

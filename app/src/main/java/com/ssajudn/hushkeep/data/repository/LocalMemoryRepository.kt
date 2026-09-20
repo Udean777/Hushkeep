@@ -37,6 +37,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -60,14 +61,19 @@ class LocalMemoryRepository(
     private val cloudSource = supabaseClient?.let(::SupabaseMemoryDataSource)
 
     override fun observeTimeline(ownerId: String): Flow<List<Memory>> =
-        memoryDao.observeTimeline(ownerId).map { memories -> memories.map { it.toDomain() } }
+        memoryDao.observeTimeline(ownerId)
+            .map { memories -> memories.map { it.toDomain() } }
+            .distinctUntilChanged()
 
     override fun observeFavorites(ownerId: String): Flow<List<Memory>> =
-        memoryDao.observeFavorites(ownerId).map { memories -> memories.map { it.toDomain() } }
+        memoryDao.observeFavorites(ownerId)
+            .map { memories -> memories.map { it.toDomain() } }
+            .distinctUntilChanged()
 
     override fun observeByAlbum(ownerId: String, albumId: String): Flow<List<Memory>> =
         memoryDao.observeByAlbum(ownerId, albumId)
             .map { memories -> memories.map { it.toDomain() } }
+            .distinctUntilChanged()
 
     override fun search(ownerId: String, filters: MemorySearchFilters): Flow<List<Memory>> =
         memoryDao.search(
@@ -77,9 +83,12 @@ class LocalMemoryRepository(
             fromEpochMs = filters.fromEpochMs,
             toEpochMsExclusive = filters.toEpochMsExclusive,
         ).map { memories -> memories.map { it.toDomain() } }
+            .distinctUntilChanged()
 
     override fun observeAlbums(ownerId: String): Flow<List<Album>> =
-        albumDao.observeActive(ownerId).map { albums -> albums.map { it.toDomain() } }
+        albumDao.observeActive(ownerId)
+            .map { albums -> albums.map { it.toDomain() } }
+            .distinctUntilChanged()
 
     override fun observeTrash(ownerId: String): Flow<List<TrashItem>> = combine(
         memoryDao.observeTrash(ownerId),
@@ -113,7 +122,7 @@ class LocalMemoryRepository(
                 }
             }
         }.sortedByDescending(TrashItem::deletedAt)
-    }
+    }.distinctUntilChanged()
 
     override fun observeStorageUsage(ownerId: String): Flow<StorageUsage> = combine(
         database.mediaObjectDao().observeLocalStorageUsage(ownerId),
@@ -121,10 +130,12 @@ class LocalMemoryRepository(
         database.mediaObjectDao().observePendingStorageUsage(ownerId),
     ) { local, cloud, pending ->
         StorageUsage(localBytes = local, cloudBytes = cloud, pendingBytes = pending)
-    }
+    }.distinctUntilChanged()
 
     override fun observeUploadJobs(ownerId: String): Flow<List<UploadJob>> =
-        database.uploadJobDao().observeForOwner(ownerId).map { jobs -> jobs.map { it.toDomain() } }
+        database.uploadJobDao().observeForOwner(ownerId)
+            .map { jobs -> jobs.map { it.toDomain() } }
+            .distinctUntilChanged()
 
     override suspend fun refreshFromCloud(ownerId: String): AppResult<Unit> {
         val source = cloudSource ?: return AppResult.Success(Unit)

@@ -9,6 +9,7 @@ import com.ssajudn.hushkeep.core.network.SupabaseClientProvider
 import com.ssajudn.hushkeep.data.local.HushkeepDatabase
 import com.ssajudn.hushkeep.data.remote.SupabaseMemoryDataSource
 import com.ssajudn.hushkeep.data.repository.LocalMemoryRepository
+import com.ssajudn.hushkeep.domain.model.SyncState
 import java.io.File
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -23,6 +24,7 @@ class CloudSyncWorker(
         val client = SupabaseClientProvider.create() ?: return Result.success()
         val database = HushkeepDatabase.getInstance(applicationContext)
         val source = SupabaseMemoryDataSource(client)
+        var attemptedMemoryIds = emptySet<String>()
 
         return runCatching {
             // Pull remote-newer records before deciding what this device should
@@ -54,6 +56,7 @@ class CloudSyncWorker(
                 remote == null || SyncConflictResolver.shouldUploadLocal(
                     local.updatedAtEpochMs,
                     remote.updatedAt.toEpochMs(),
+                    local.syncState,
                 )
             }
             val mediaToPush = mediaObjects.filter { local ->
@@ -61,7 +64,12 @@ class CloudSyncWorker(
                 remote == null || SyncConflictResolver.shouldUploadLocal(
                     local.updatedAtEpochMs,
                     remote.updatedAt.toEpochMs(),
+                    local.syncState,
                 )
+            }
+            attemptedMemoryIds = buildSet {
+                addAll(memoriesToPush.map { it.id })
+                addAll(mediaToPush.map { it.memoryId })
             }
             source.upsertAlbums(albumsToPush)
             source.upsertMemories(memoriesToPush)
@@ -79,7 +87,27 @@ class CloudSyncWorker(
             onFailure = {
                 val database = HushkeepDatabase.getInstance(applicationContext)
                 val memories = database.memoryDao().findAllForOwner(ownerId)
-                database.memoryDao().markSyncFailed(ownerId, memories.map { it.id })
+                val mediaByMemory = database.mediaObjectDao()
+                    .findAll(ownerId)
+                    .groupBy { it.memoryId }
+                val retryableMemories = memories.filter { memory ->
+                    val state = SyncState.fromStorage(memory.syncState)
+                    memory.id in attemptedMemoryIds && SyncStatePolicy.isRetryable(state.name)
+                }
+                val partiallySyncedIds = retryableMemories
+                    .filter { memory ->
+                        SyncStatePolicy.afterMetadataSyncFailure(
+                            hasUploadedMedia = mediaByMemory[memory.id]
+                                .orEmpty()
+                                .any { it.storagePath != null },
+                        ) == SyncState.PARTIALLY_SYNCED
+                    }
+                    .map { it.id }
+                val failedIds = retryableMemories
+                    .filterNot { it.id in partiallySyncedIds }
+                    .map { it.id }
+                database.memoryDao().markPartiallySynced(ownerId, partiallySyncedIds)
+                database.memoryDao().markSyncFailed(ownerId, failedIds)
                 Result.retry()
             },
         )

@@ -33,7 +33,35 @@ class SyncConflictResolverTest {
     @Test
     fun `local data is uploaded when it is newer or tied`() {
         assertTrue(SyncConflictResolver.shouldUploadLocal(200L, 100L))
-        assertTrue(SyncConflictResolver.shouldUploadLocal(100L, 100L))
+        assertTrue(
+            SyncConflictResolver.shouldUploadLocal(
+                localUpdatedAtEpochMs = 100L,
+                remoteUpdatedAtEpochMs = 100L,
+                localSyncState = SyncState.PARTIALLY_SYNCED.name,
+            ),
+        )
         assertFalse(SyncConflictResolver.shouldUploadLocal(100L, 200L))
+    }
+
+    @Test
+    fun `synced local data does not get re-uploaded on an equal timestamp`() {
+        assertFalse(
+            SyncConflictResolver.shouldUploadLocal(
+                localUpdatedAtEpochMs = 100L,
+                remoteUpdatedAtEpochMs = 100L,
+                localSyncState = SyncState.SYNCED.name,
+            ),
+        )
+    }
+
+    @Test
+    fun `partial local data wins an equal timestamp during refresh`() {
+        assertTrue(
+            SyncConflictResolver.shouldKeepLocal(
+                localUpdatedAtEpochMs = 100L,
+                remoteUpdatedAtEpochMs = 100L,
+                localSyncState = SyncState.PARTIALLY_SYNCED.name,
+            ),
+        )
     }
 }

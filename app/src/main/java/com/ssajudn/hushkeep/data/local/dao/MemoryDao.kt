@@ -143,10 +143,21 @@ interface MemoryDao {
     @Query(
         """
         UPDATE memories
+        SET syncState = 'PARTIALLY_SYNCED'
+        WHERE ownerId = :ownerId
+          AND id IN (:memoryIds)
+          AND syncState IN ('PENDING', 'SYNCING', 'PARTIALLY_SYNCED', 'FAILED')
+        """,
+    )
+    suspend fun markPartiallySynced(ownerId: String, memoryIds: List<String>): Int
+
+    @Query(
+        """
+        UPDATE memories
         SET syncState = 'FAILED'
         WHERE ownerId = :ownerId
           AND id IN (:memoryIds)
-          AND syncState IN ('PENDING', 'SYNCING', 'FAILED')
+          AND syncState IN ('PENDING', 'SYNCING', 'PARTIALLY_SYNCED', 'FAILED')
         """,
     )
     suspend fun markSyncFailed(ownerId: String, memoryIds: List<String>): Int

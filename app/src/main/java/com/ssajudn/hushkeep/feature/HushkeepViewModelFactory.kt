@@ -14,6 +14,7 @@ class HushkeepViewModelFactory(
                 authRepository = container.authRepository,
                 memoryRepository = container.memoryRepository,
                 exportManager = container.exportManager,
+                realtimeSyncCoordinator = container.realtimeSyncCoordinator,
             ) as T
         }
         error("Unknown ViewModel: ${modelClass.name}")

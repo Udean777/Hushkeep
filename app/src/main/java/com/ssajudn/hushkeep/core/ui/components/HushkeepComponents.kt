@@ -24,6 +24,9 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.BrokenImage
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.CloudQueue
+import androidx.compose.material.icons.filled.CloudSync
+import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Add
@@ -549,16 +552,23 @@ fun Memory.displayUri(): Uri? =
 fun SyncStatusIndicator(syncState: SyncState) {
     val (label, icon) = when (syncState) {
         SyncState.SYNCED -> "Tersimpan" to Icons.Default.CloudDone
-        SyncState.FAILED -> "Perlu dicoba lagi" to Icons.Default.CloudOff
-        SyncState.SYNCING -> "Menyinkronkan" to Icons.Default.CloudDone
-        SyncState.PENDING -> "Menunggu backup" to Icons.Default.CloudOff
+        SyncState.FAILED -> "Sinkronisasi gagal, coba lagi" to Icons.Default.CloudOff
+        SyncState.SYNCING -> "Menyinkronkan" to Icons.Default.CloudSync
+        SyncState.PARTIALLY_SYNCED -> "Foto tersimpan, menunggu backup" to Icons.Default.CloudUpload
+        SyncState.PENDING -> "Menunggu backup" to Icons.Default.CloudQueue
         SyncState.DELETED -> "Dihapus" to Icons.Default.DeleteOutline
     }
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         Icon(icon, contentDescription = null, modifier = Modifier.size(15.dp))
         Spacer(Modifier.width(5.dp))
         Text(
             label,
+            modifier = Modifier.weight(1f),
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

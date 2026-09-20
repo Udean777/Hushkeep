@@ -12,8 +12,24 @@ object SyncConflictResolver {
         remoteUpdatedAtEpochMs: Long,
         localSyncState: String? = null,
     ): Boolean = localUpdatedAtEpochMs > remoteUpdatedAtEpochMs ||
-        (localUpdatedAtEpochMs == remoteUpdatedAtEpochMs && localSyncState == SyncState.PENDING.name)
+        (localUpdatedAtEpochMs == remoteUpdatedAtEpochMs && isLocalChangePending(localSyncState))
 
-    fun shouldUploadLocal(localUpdatedAtEpochMs: Long, remoteUpdatedAtEpochMs: Long): Boolean =
-        localUpdatedAtEpochMs >= remoteUpdatedAtEpochMs
+    fun shouldUploadLocal(
+        localUpdatedAtEpochMs: Long,
+        remoteUpdatedAtEpochMs: Long,
+        localSyncState: String? = null,
+    ): Boolean = localUpdatedAtEpochMs > remoteUpdatedAtEpochMs ||
+        (localUpdatedAtEpochMs == remoteUpdatedAtEpochMs && isLocalChangePending(localSyncState))
+
+    private fun isLocalChangePending(syncState: String?): Boolean = when (SyncState.fromStorage(syncState.orEmpty())) {
+        SyncState.PENDING,
+        SyncState.SYNCING,
+        SyncState.PARTIALLY_SYNCED,
+        SyncState.FAILED,
+        -> true
+
+        SyncState.SYNCED,
+        SyncState.DELETED,
+        -> false
+    }
 }

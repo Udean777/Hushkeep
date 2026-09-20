@@ -9,6 +9,7 @@ import com.ssajudn.hushkeep.core.common.UiState
 import com.ssajudn.hushkeep.core.config.AppConfig
 import com.ssajudn.hushkeep.core.media.ExportManager
 import com.ssajudn.hushkeep.core.common.UserFacingMessages
+import com.ssajudn.hushkeep.core.sync.RealtimeSyncCoordinator
 import com.ssajudn.hushkeep.domain.model.Memory
 import com.ssajudn.hushkeep.domain.model.MemorySearchFilters
 import com.ssajudn.hushkeep.domain.model.TrashItem
@@ -31,6 +32,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
@@ -43,6 +45,7 @@ class HushkeepViewModel(
     private val authRepository: AuthRepository,
     private val memoryRepository: MemoryRepository,
     private val exportManager: ExportManager,
+    private val realtimeSyncCoordinator: RealtimeSyncCoordinator,
 ) : ViewModel() {
     val authState: StateFlow<AuthState> = authRepository.state
 
@@ -52,9 +55,18 @@ class HushkeepViewModel(
         }
         viewModelScope.launch {
             authState
-                .filterIsInstance<AuthState.SignedIn>()
                 .collectLatest { signedIn ->
-                    memoryRepository.refreshFromCloud(signedIn.user.id)
+                    if (signedIn is AuthState.SignedIn) {
+                        realtimeSyncCoordinator.start(signedIn.user.id)
+                        try {
+                            memoryRepository.refreshFromCloud(signedIn.user.id)
+                            awaitCancellation()
+                        } finally {
+                            realtimeSyncCoordinator.stop()
+                        }
+                    } else {
+                        realtimeSyncCoordinator.stop()
+                    }
                 }
         }
     }
@@ -121,6 +133,11 @@ class HushkeepViewModel(
     fun refreshCloud() {
         val ownerId = (authState.value as? AuthState.SignedIn)?.user?.id ?: return
         viewModelScope.launch { memoryRepository.refreshFromCloud(ownerId) }
+    }
+
+    fun ensureRealtime() {
+        val ownerId = (authState.value as? AuthState.SignedIn)?.user?.id ?: return
+        viewModelScope.launch { realtimeSyncCoordinator.start(ownerId) }
     }
 
     fun signUp(username: String, email: String, password: String, confirmPassword: String) {
@@ -328,5 +345,10 @@ class HushkeepViewModel(
 
     private fun report(error: AppError) {
         _messages.tryEmit(AppMessage.Text(UserFacingMessages.forError(error)))
+    }
+
+    override fun onCleared() {
+        realtimeSyncCoordinator.close()
+        super.onCleared()
     }
 }

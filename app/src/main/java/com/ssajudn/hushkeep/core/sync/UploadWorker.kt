@@ -130,12 +130,14 @@ class UploadWorker(
         )
         setProgress(androidx.work.workDataOf("phase" to UploadStatus.UPLOADING.name))
 
+        var uploadedStoragePath: String? = null
         return try {
             val extension = MimeTypeResolver.extensionForMimeType(media.mimeType)
             val storagePath = StoragePaths.originalObjectPath(media.ownerId, media.id, extension)
             supabase.storage.from(StoragePaths.PRIVATE_BUCKET).upload(storagePath, bytes) {
                 upsert = true
             }
+            uploadedStoragePath = storagePath
             database.mediaObjectDao().updateSyncState(
                 mediaObjectId = media.id,
                 syncState = SyncState.SYNCED.name,
@@ -145,7 +147,7 @@ class UploadWorker(
             database.memoryDao().updateSyncState(
                 memoryId = media.memoryId,
                 ownerId = media.ownerId,
-                syncState = SyncState.SYNCING.name,
+                syncState = SyncStatePolicy.afterMediaUpload().name,
                 updatedAtEpochMs = now.toEpochMilli(),
             )
             database.uploadJobDao().updateProgress(job.id, bytes.size.toLong(), 100, now.toEpochMilli())
@@ -168,6 +170,7 @@ class UploadWorker(
                 job.attemptCount,
                 now,
                 UserFacingMessages.UPLOAD_FAILED,
+                mediaUploaded = uploadedStoragePath != null,
             )
         }
     }
@@ -178,6 +181,7 @@ class UploadWorker(
         currentAttemptCount: Int,
         now: Instant,
         message: String,
+        mediaUploaded: Boolean = false,
     ): Result {
         val attemptCount = currentAttemptCount + 1
         val shouldRetry = RetryPolicy.shouldRetry(attemptCount)
@@ -192,10 +196,21 @@ class UploadWorker(
             updatedAtEpochMs = now.toEpochMilli(),
         )
         database.mediaObjectDao().findById(mediaObjectId)?.let { media ->
+            val hasUploadedMedia = mediaUploaded || media.storagePath != null
+            if (mediaUploaded && media.storagePath == null) {
+                val extension = MimeTypeResolver.extensionForMimeType(media.mimeType)
+                val storagePath = StoragePaths.originalObjectPath(media.ownerId, media.id, extension)
+                database.mediaObjectDao().updateSyncState(
+                    mediaObjectId = media.id,
+                    syncState = SyncState.SYNCED.name,
+                    storagePath = storagePath,
+                    updatedAtEpochMs = now.toEpochMilli(),
+                )
+            }
             database.memoryDao().updateSyncState(
                 memoryId = media.memoryId,
                 ownerId = media.ownerId,
-                syncState = SyncState.FAILED.name,
+                syncState = SyncStatePolicy.afterMetadataSyncFailure(hasUploadedMedia).name,
                 updatedAtEpochMs = now.toEpochMilli(),
             )
         }

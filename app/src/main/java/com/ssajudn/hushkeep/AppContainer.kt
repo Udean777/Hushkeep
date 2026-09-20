@@ -5,6 +5,8 @@ import com.ssajudn.hushkeep.core.di.AppModule
 import com.ssajudn.hushkeep.core.di.DatabaseModule
 import com.ssajudn.hushkeep.core.di.NetworkModule
 import com.ssajudn.hushkeep.core.di.RepositoryModule
+import com.ssajudn.hushkeep.core.sync.RealtimeSyncCoordinator
+import com.ssajudn.hushkeep.core.sync.SupabaseRealtimeSyncCoordinator
 import com.ssajudn.hushkeep.data.local.HushkeepDatabase
 import com.ssajudn.hushkeep.data.local.SessionStore
 import com.ssajudn.hushkeep.domain.repository.AuthRepository
@@ -27,6 +29,10 @@ class AppContainer(context: Context) {
         database = database,
         workManager = workManager,
         client = supabaseClient,
+    )
+    val realtimeSyncCoordinator: RealtimeSyncCoordinator = SupabaseRealtimeSyncCoordinator(
+        client = supabaseClient,
+        onRemoteChange = memoryRepository::refreshFromCloud,
     )
 
     val authRepository: AuthRepository = RepositoryModule.provideAuthRepository(

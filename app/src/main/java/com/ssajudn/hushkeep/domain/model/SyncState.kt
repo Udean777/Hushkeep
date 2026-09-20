@@ -3,6 +3,7 @@ package com.ssajudn.hushkeep.domain.model
 enum class SyncState {
     PENDING,
     SYNCING,
+    PARTIALLY_SYNCED,
     SYNCED,
     FAILED,
     DELETED;
