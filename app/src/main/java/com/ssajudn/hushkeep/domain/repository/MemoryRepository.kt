@@ -29,7 +29,12 @@ interface MemoryRepository {
 
     suspend fun refreshFromCloud(ownerId: String): AppResult<Unit>
 
-    suspend fun importPhoto(ownerId: String, uri: Uri, albumId: String? = null): AppResult<Memory>
+    suspend fun importPhoto(
+        ownerId: String,
+        uri: Uri,
+        albumId: String? = null,
+        caption: String? = null,
+    ): AppResult<Memory>
 
     suspend fun createAlbum(ownerId: String, name: String): AppResult<Album>
 

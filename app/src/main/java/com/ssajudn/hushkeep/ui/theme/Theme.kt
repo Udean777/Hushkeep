@@ -39,8 +39,8 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = HushkeepCoral,
-    onPrimary = HushkeepInk,
+    primary = HushkeepCoralPressed,
+    onPrimary = HushkeepPaper,
     primaryContainer = HushkeepCoralContainer,
     onPrimaryContainer = HushkeepInk,
     secondary = HushkeepSun,

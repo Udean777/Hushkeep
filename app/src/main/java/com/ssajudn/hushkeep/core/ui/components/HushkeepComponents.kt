@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.BrokenImage
+import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.CloudQueue
@@ -305,7 +306,9 @@ fun MemoryListItem(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(8.dp))
+                MemoryTimestamp(memory)
+                Spacer(Modifier.height(5.dp))
                 SyncStatusIndicator(memory.syncState)
             }
             IconButton(onClick = onFavorite) {
@@ -316,7 +319,11 @@ fun MemoryListItem(
                 )
             }
             IconButton(onClick = onDelete) {
-                Icon(Icons.Default.DeleteOutline, contentDescription = "Pindahkan ke trash")
+                Icon(
+                    Icons.Default.DeleteOutline,
+                    contentDescription = "Pindahkan ke trash",
+                    tint = MaterialTheme.colorScheme.error,
+                )
             }
         }
     }
@@ -368,8 +375,8 @@ fun FeaturedMemoryCard(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        "A moment to return to",
                         modifier = Modifier.weight(1f),
+                        text = "A moment to return to",
                         style = MaterialTheme.typography.labelLarge,
                         color = HushkeepPaper,
                     )
@@ -384,7 +391,7 @@ fun FeaturedMemoryCard(
             }
             Row(
                 modifier = Modifier.padding(start = 16.dp, top = 14.dp, end = 8.dp, bottom = 14.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.Top,
             ) {
                 Column(Modifier.weight(1f)) {
                     Text(
@@ -393,11 +400,17 @@ fun FeaturedMemoryCard(
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(8.dp))
+                    MemoryTimestamp(memory)
+                    Spacer(Modifier.height(5.dp))
                     SyncStatusIndicator(memory.syncState)
                 }
                 IconButton(onClick = onDelete) {
-                    Icon(Icons.Default.DeleteOutline, contentDescription = "Pindahkan ke trash")
+                    Icon(
+                        Icons.Default.DeleteOutline,
+                        contentDescription = "Pindahkan ke trash",
+                        tint = MaterialTheme.colorScheme.error,
+                    )
                 }
             }
         }
@@ -444,17 +457,23 @@ fun MemoryGridTile(
                 }
             }
             Row(
-                modifier = Modifier.padding(start = 10.dp, end = 2.dp, top = 8.dp, bottom = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(start = 12.dp, end = 4.dp, top = 10.dp, bottom = 6.dp),
+                verticalAlignment = Alignment.Top,
             ) {
-                Text(
-                    memory.caption ?: "Tanpa caption",
-                    modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                IconButton(onClick = onFavorite) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        memory.caption ?: "Tanpa caption",
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(Modifier.height(7.dp))
+                    MemoryTimestamp(memory)
+                }
+                IconButton(
+                    onClick = onFavorite,
+                    modifier = Modifier.size(48.dp),
+                ) {
                     Icon(
                         if (memory.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                         contentDescription = if (memory.isFavorite) "Hapus dari favorit" else "Simpan ke favorit",
@@ -464,6 +483,33 @@ fun MemoryGridTile(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun MemoryTimestamp(
+    memory: Memory,
+    color: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+    ) {
+        Icon(
+            Icons.Default.CalendarToday,
+            contentDescription = null,
+            modifier = Modifier.size(14.dp),
+            tint = color,
+        )
+        Text(
+            HushkeepDateTimeFormatter.timelineTimestamp(memory.capturedAt),
+            style = MaterialTheme.typography.labelMedium,
+            color = color,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 

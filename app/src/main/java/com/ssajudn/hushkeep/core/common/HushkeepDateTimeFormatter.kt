@@ -15,6 +15,10 @@ object HushkeepDateTimeFormatter {
         DateFormats.EXPORT_FILE,
         Locale.ROOT,
     )
+    private val timelineTimestampFormatter = DateTimeFormatter.ofPattern(
+        DateFormats.TIMELINE_TIMESTAMP,
+        Locale.getDefault(),
+    )
     private val isoFormatter = DateTimeFormatter.ofPattern(
         DateFormats.ISO_INSTANT,
         Locale.ROOT,
@@ -22,6 +26,9 @@ object HushkeepDateTimeFormatter {
 
     fun timelineDay(instant: Instant, zoneId: ZoneId = ZoneId.systemDefault()): String =
         timelineFormatter.withZone(zoneId).format(instant)
+
+    fun timelineTimestamp(instant: Instant, zoneId: ZoneId = ZoneId.systemDefault()): String =
+        timelineTimestampFormatter.withZone(zoneId).format(instant)
 
     fun exportFileTimestamp(instant: Instant, zoneId: ZoneId = ZoneId.systemDefault()): String =
         exportFormatter.withZone(zoneId).format(instant)

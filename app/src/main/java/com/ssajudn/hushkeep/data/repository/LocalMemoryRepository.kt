@@ -204,6 +204,7 @@ class LocalMemoryRepository(
         ownerId: String,
         uri: Uri,
         albumId: String?,
+        caption: String?,
     ): AppResult<Memory> {
         val metadata = uriResolver.inspect(uri)
         val mimeType = metadata.mimeType
@@ -256,12 +257,17 @@ class LocalMemoryRepository(
             localFile.delete()
             return AppResult.Failure(AppError.Validation("Ukuran foto melebihi batas MVP."))
         }
+        val cleanCaption = caption?.trim()?.takeIf(String::isNotBlank)
+        if (cleanCaption != null && cleanCaption.length > 280) {
+            localFile.delete()
+            return AppResult.Failure(AppError.Validation("Caption maksimal 280 karakter."))
+        }
         val localUri = Uri.fromFile(localFile).toString()
         val memory = Memory(
             id = memoryId,
             ownerId = ownerId,
             albumId = albumId,
-            caption = null,
+            caption = cleanCaption,
             capturedAt = now,
             createdAt = now,
             updatedAt = now,

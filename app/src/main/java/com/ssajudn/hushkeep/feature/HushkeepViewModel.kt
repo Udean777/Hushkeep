@@ -12,6 +12,7 @@ import com.ssajudn.hushkeep.core.common.UserFacingMessages
 import com.ssajudn.hushkeep.core.sync.RealtimeSyncCoordinator
 import com.ssajudn.hushkeep.domain.model.Memory
 import com.ssajudn.hushkeep.domain.model.MemorySearchFilters
+import com.ssajudn.hushkeep.domain.model.PhotoImport
 import com.ssajudn.hushkeep.domain.model.TrashItem
 import com.ssajudn.hushkeep.domain.model.StorageUsage
 import com.ssajudn.hushkeep.domain.model.UploadJob
@@ -191,18 +192,20 @@ class HushkeepViewModel(
         }
     }
 
-    fun importPhotos(uris: List<Uri>, albumId: String? = null) {
+    fun importPhotos(photos: List<PhotoImport>, albumId: String? = null) {
         val ownerId = (authState.value as? AuthState.SignedIn)?.user?.id ?: return
         viewModelScope.launch {
             var imported = 0
-            uris.forEach { uri ->
-                when (memoryRepository.importPhoto(ownerId, uri, albumId)) {
+            var failed = 0
+            photos.forEach { photo ->
+                when (memoryRepository.importPhoto(ownerId, photo.uri, albumId, photo.caption)) {
                     is AppResult.Success -> imported++
-                    is AppResult.Failure -> Unit
+                    is AppResult.Failure -> failed++
                 }
             }
             if (imported > 0) {
-                _messages.emit(AppMessage.Text("$imported foto ditambahkan ke vault."))
+                val suffix = if (failed > 0) " $failed foto dilewati." else ""
+                _messages.emit(AppMessage.Text("$imported foto ditambahkan ke vault.$suffix"))
             } else {
                 _messages.emit(AppMessage.Text("Tidak ada foto yang berhasil ditambahkan."))
             }
